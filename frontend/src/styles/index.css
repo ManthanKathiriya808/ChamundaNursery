@@ -1,0 +1,30 @@
+/* Tailwind base import and premium theme globals */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global CSS variables to reinforce premium look */
+:root {
+  color-scheme: light;
+}
+
+/* Reusable button styles with smooth hover transitions */
+.btn {
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-medium transition ease-soft duration-300;
+}
+.btn-primary {
+  @apply bg-primary text-white shadow-premium hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
+}
+.btn-outline {
+  @apply border border-primary text-primary hover:bg-primary hover:text-white;
+}
+
+/* Link hover effects */
+.link-hover {
+  @apply transition ease-soft duration-200 hover:text-primary;
+}
+
+/* Container utilities for consistent responsive spacing */
+.page-container {
+  @apply mx-auto max-w-7xl py-6;
+}

@@ -1,0 +1,2 @@
+import React from 'react'
+export default function AdminReviews() { return <div className="space-y-6"><h1 className="text-2xl font-semibold">Reviews</h1><p className="text-neutral-700">CRUD placeholders. Integrate with /api/reviews (JWT required).</p></div> }

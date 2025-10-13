@@ -1,0 +1,2 @@
+import React from 'react'
+export default function AdminCategories() { return <div className="space-y-6"><h1 className="text-2xl font-semibold">Categories</h1><p className="text-neutral-700">CRUD placeholders. Integrate with backend /api/categories.</p></div> }
