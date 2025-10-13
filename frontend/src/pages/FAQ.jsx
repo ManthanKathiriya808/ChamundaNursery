@@ -23,7 +23,7 @@ export default function FAQ() {
               aria-expanded={open === i}
               onClick={() => setOpen(open === i ? -1 : i)}
             >{item.q}</button>
-            {open === i && <div className="p-3 text-neutral-700">{item.a}</div>}
+            {open === i && <div className="p-3 text-serif-soft">{item.a}</div>}
           </li>
         ))}
       </ul>

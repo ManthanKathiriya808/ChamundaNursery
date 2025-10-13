@@ -11,7 +11,7 @@ const demoArticles = Array.from({ length: 6 }).map((_, i) => ({
   id: i + 1,
   title: `Plant Care Guide ${i + 1}`,
   summary: 'Learn tips and tricks to keep your plants healthy.',
-  img: '/logo.svg'
+  img: '/logo.png'
 }))
 
 export default function Blog() {

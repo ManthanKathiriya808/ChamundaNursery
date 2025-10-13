@@ -9,7 +9,7 @@ export default function About() {
         <meta name="description" content="Learn about Chamunda Nursery" />
       </Helmet>
       <h1 className="text-2xl font-semibold mb-4">About Chamunda Nursery</h1>
-      <p className="text-neutral-700">We provide premium plants and gardening supplies, focusing on quality and customer satisfaction.</p>
+      <p className="text-serif-soft">We provide premium plants and gardening supplies, focusing on quality and customer satisfaction.</p>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ProductCardSkeleton } from '../components/Skeleton.jsx'
+import ProductCard from '../components/ProductCard.jsx'
 import { fetchProducts } from '../services/api.js'
 
 const categories = {
@@ -13,18 +14,24 @@ const categories = {
 export default function Catalog() {
   const [params] = useSearchParams()
   const activeCategory = params.get('category')
+  const [sort, setSort] = useState('popular')
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
+  const [error, setError] = useState('')
 
   useEffect(() => {
     setLoading(true)
-    // Simulate async loading
-    fetchProducts({ category: activeCategory }).then(() => {
-      // demo items
-      const demo = Array.from({ length: 8 }).map((_, i) => ({ id: i + 1, name: `Product ${i + 1}`, price: (i + 1) * 99 }))
-      setItems(demo)
-      setLoading(false)
-    })
+    setError('')
+    fetchProducts({ category: activeCategory })
+      .then((data) => {
+        setItems(Array.isArray(data) ? data : (data.items || []))
+      })
+      .catch((e) => {
+        console.error(e)
+        setError('Failed to load products')
+        setItems([])
+      })
+      .finally(() => setLoading(false))
   }, [activeCategory])
 
   return (
@@ -48,20 +55,35 @@ export default function Catalog() {
             </ul>
           </div>
         ))}
+        <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <h3 className="font-semibold mb-2">Sort</h3>
+          <select className="input input-bordered w-full" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort products">
+            <option value="popular">Most Popular</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="new">Newest</option>
+          </select>
+        </div>
       </aside>
 
       {/* Product grid */}
       <section className="lg:col-span-3" aria-label="Products">
+        {error && (
+          <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading
             ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
-            : items.map((item) => (
-                <Link key={item.id} to={`/product/${item.id}`} className="group rounded-lg border border-neutral-200 bg-white p-3 hover:shadow-premium transition ease-soft">
-                  <div className="h-32 rounded-md bg-neutral-100 group-hover:bg-accent/40 transition ease-soft"></div>
-                  <div className="mt-2 text-sm text-neutral-700">{item.name}</div>
-                  <div className="text-neutral-500">₹{item.price}</div>
-                </Link>
-              ))}
+            : items
+                .slice()
+                .sort((a, b) => {
+                  if (sort === 'price_asc') return (a.price || 0) - (b.price || 0)
+                  if (sort === 'price_desc') return (b.price || 0) - (a.price || 0)
+                  return 0
+                })
+                .map((item) => (
+                  <ProductCard key={item.id || item._id} id={item.id || item._id} name={item.name} price={item.price} image={item.image} tag={activeCategory ? activeCategory[0].toUpperCase() + activeCategory.slice(1) : undefined} />
+                ))}
         </div>
       </section>
     </div>

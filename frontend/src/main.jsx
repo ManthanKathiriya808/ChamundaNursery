@@ -2,17 +2,12 @@
 import React, { Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { HelmetProvider } from 'react-helmet-async'
 import App from './App.jsx'
 import UserProvider from './hooks/UserProvider.jsx'
+import CartProvider from './hooks/CartProvider.jsx'
 import ToastProvider from './components/ToastProvider.jsx'
-import AdminLayout from './admin/AdminLayout.jsx'
-import AdminDashboard from './admin/AdminDashboard.jsx'
-import AdminProducts from './admin/Products.jsx'
-import AdminCategories from './admin/Categories.jsx'
-import AdminOrders from './admin/Orders.jsx'
-import AdminUsers from './admin/Users.jsx'
-import AdminReviews from './admin/Reviews.jsx'
 import './styles/index.css'
 
 // Lazy-load main pages for performance
@@ -33,13 +28,23 @@ const Terms = React.lazy(() => import('./pages/Terms.jsx'))
 const Privacy = React.lazy(() => import('./pages/Privacy.jsx'))
 const Legal = React.lazy(() => import('./pages/Legal.jsx'))
 const Blog = React.lazy(() => import('./pages/Blog.jsx'))
+// Lazy-load admin pages and layout
+const AdminLayout = React.lazy(() => import('./admin/AdminLayout.jsx'))
+const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard.jsx'))
+const AdminProducts = React.lazy(() => import('./admin/Products.jsx'))
+const AdminCategories = React.lazy(() => import('./admin/Categories.jsx'))
+const AdminOrders = React.lazy(() => import('./admin/Orders.jsx'))
+const AdminUsers = React.lazy(() => import('./admin/Users.jsx'))
+const AdminReviews = React.lazy(() => import('./admin/Reviews.jsx'))
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <HelmetProvider>
       <UserProvider>
         <ToastProvider>
-        <BrowserRouter>
+        <CartProvider>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <ErrorBoundary>
           {/* Fallback skeleton for lazy-loaded routes */}
           <Suspense fallback={<div className="p-6 animate-pulse text-neutral-600">Loading…</div>}>
             <Routes>
@@ -76,7 +81,9 @@ createRoot(document.getElementById('root')).render(
               </Route>
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </BrowserRouter>
+        </CartProvider>
         </ToastProvider>
       </UserProvider>
     </HelmetProvider>

@@ -6,6 +6,10 @@
 /* Global CSS variables to reinforce premium look */
 :root {
   color-scheme: light;
+  --color-primary: #22c55e; /* Tailwind green-500 */
+  --color-primaryDark: #15803d; /* green-700 */
+  --color-accent: #facc15; /* yellow-400 */
+  --radius: 14px;
 }
 
 /* Reusable button styles with smooth hover transitions */
@@ -13,10 +17,22 @@
   @apply inline-flex items-center justify-center rounded-md px-4 py-2 font-medium transition ease-soft duration-300;
 }
 .btn-primary {
-  @apply bg-primary text-white shadow-premium hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
+  @apply bg-primary text-white shadow-premium hover:bg-primaryDark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
 }
 .btn-outline {
-  @apply border border-primary text-primary hover:bg-primary hover:text-white;
+  @apply border border-primary text-primary hover:bg-primary/10 hover:text-primary bg-white;
+}
+.btn-accent {
+  @apply bg-accent text-neutral-900 hover:bg-accentLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent;
+}
+.btn-white {
+  @apply bg-white text-neutral-900 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900;
+}
+.btn-ghost {
+  @apply bg-transparent text-white border border-white/60 hover:bg-white hover:text-primary;
+}
+.btn-invert {
+  @apply bg-white text-primary border border-white hover:bg-neutral-100;
 }
 
 /* Link hover effects */
@@ -28,3 +44,17 @@
 .page-container {
   @apply mx-auto max-w-7xl py-6;
 }
+
+/* Typography utilities */
+.heading-hero { @apply font-display text-4xl md:text-6xl font-normal tracking-tight; }
+.heading-section { @apply font-display text-3xl md:text-4xl font-normal; }
+.text-body { @apply font-body text-neutral-700 leading-relaxed; }
+.text-serif-soft { @apply font-serifSoft text-neutral-800; }
+
+/* Card and surface utilities */
+.surface { @apply rounded-xl border border-neutral-200 bg-white shadow-soft; }
+.surface-hover { @apply transition ease-soft hover:shadow-premium; }
+
+/* Badge styles */
+.badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700; }
+.badge-primary { @apply bg-primary/10 text-primary; }

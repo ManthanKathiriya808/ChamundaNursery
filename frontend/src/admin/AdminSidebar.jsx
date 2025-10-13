@@ -1,5 +1,6 @@
 // Admin sidebar with navigation and role-based guard placeholder
 import React from 'react'
+import ImageLazy from '../components/ImageLazy.jsx'
 import { NavLink } from 'react-router-dom'
 import useUser from '../hooks/useUser.js'
 
@@ -10,7 +11,7 @@ export default function AdminSidebar() {
   return (
     <nav aria-label="Admin navigation" className="p-4 space-y-2">
       <div className="flex items-center gap-2">
-        <img src="/logo.svg" alt="Chamunda Nursery" className="h-8 w-8" />
+        <ImageLazy src="/logo.png" alt="Chamunda Nursery" className="h-8 w-8" />
         <span className="font-semibold">Admin Panel</span>
       </div>
       {/* Role-based access UI placeholder */}
