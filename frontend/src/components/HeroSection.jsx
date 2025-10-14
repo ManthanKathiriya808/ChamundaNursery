@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { IconLeaf, IconTruck, IconShieldCheck, IconSearch } from '@tabler/icons-react'
+import { Leaf, Truck, ShieldCheck, Search, Sprout, Shovel } from 'lucide-react'
 import ImageLazy from './ImageLazy.jsx'
 
 export default function HeroSection() {
@@ -50,7 +50,7 @@ export default function HeroSection() {
             <div className="mt-6 max-w-lg">
               <label htmlFor="hero-search" className="sr-only">Search products</label>
               <div className="relative">
-                <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/80" aria-hidden="true" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/80" aria-hidden="true" />
                 <input
                   id="hero-search"
                   type="search"
@@ -62,8 +62,8 @@ export default function HeroSection() {
 
             {/* Trust badges */}
             <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[{ icon: IconLeaf, label: 'Healthy & Fresh' }, { icon: IconTruck, label: 'Fast Delivery' }, { icon: IconShieldCheck, label: 'Secure Payments' }].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-white backdrop-blur">
+              {[{ icon: Leaf, label: 'Healthy & Fresh' }, { icon: Truck, label: 'Fast Delivery' }, { icon: ShieldCheck, label: 'Secure Payments' }].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-white backdrop-blur transition-transform focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
                   <Icon className="h-5 w-5" aria-hidden="true" />
                   <span className="text-sm font-medium">{label}</span>
                 </div>
@@ -74,11 +74,12 @@ export default function HeroSection() {
           {/* Right: image collage / promo card */}
           <div className="relative">
             <div className="surface surface-hover bg-white/90 p-4 md:p-6">
-              <ImageLazy src="/logo.png" alt="Chamunda Nursery" className="w-full h-56 md:h-72 object-contain rounded-lg bg-neutral-100" />
+              <ImageLazy src="/logo.svg" alt="Chamunda Nursery" className="w-full h-56 md:h-72 object-contain rounded-lg bg-neutral-100" />
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {['Indoor Plants', 'Outdoor', 'Seeds', 'Tools'].map((c) => (
-                  <Link key={c} to={`/catalog?category=${c.toLowerCase()}`} className="rounded-md bg-accentSoft text-primary px-3 py-2 text-sm font-medium hover:bg-accentLight">
+                  <Link key={c} to={`/catalog?category=${c.toLowerCase()}`} className="rounded-md bg-accentSoft text-primary px-3 py-2 text-sm font-medium hover:bg-accentLight inline-flex items-center gap-2 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                     {c}
+                    {c === 'Seeds' ? <Sprout className="h-4 w-4" aria-hidden /> : c === 'Tools' ? <Shovel className="h-4 w-4" aria-hidden /> : <Leaf className="h-4 w-4" aria-hidden />}
                   </Link>
                 ))}
               </div>

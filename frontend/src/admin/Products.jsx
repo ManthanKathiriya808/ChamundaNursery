@@ -1,17 +1,17 @@
 // Products management with CRUD and CSV upload (client-side validation)
 import React, { useRef, useState } from 'react'
+import { useToast } from '../components/ToastProvider.jsx'
+import { InputField, SubmitButton } from '../components/forms'
+import { useData } from '../context/DataProvider.jsx'
 
 export default function AdminProducts() {
-  const [items, setItems] = useState([])
+  const toast = useToast()
+  const { products, addOrUpdateProduct, removeProduct, loading } = useData()
   const [form, setForm] = useState({ name: '', slug: '', price: '' })
   const [errors, setErrors] = useState({})
-  const [toasts, setToasts] = useState([])
   const fileRef = useRef(null)
 
-  const notify = (type, message) => {
-    setToasts((t) => [...t, { id: Date.now(), type, message }])
-    setTimeout(() => setToasts((t) => t.slice(1)), 3000)
-  }
+  const notify = (type, message) => toast.push(type, message)
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -24,18 +24,28 @@ export default function AdminProducts() {
     return Object.keys(e).length === 0
   }
 
-  const addItem = (ev) => {
+  const addItem = async (ev) => {
     ev.preventDefault()
     if (!validateForm()) return notify('error', 'Please fix form errors')
-    const next = { ...form, id: Date.now(), price: Number(form.price) }
-    setItems((i) => [next, ...i])
+    const next = { ...form, price: Number(form.price) }
+    try {
+      await addOrUpdateProduct(next)
+      notify('success', 'Product saved')
+    } catch (e) {
+      console.error(e)
+      notify('error', 'Failed to save product')
+    }
     setForm({ name: '', slug: '', price: '' })
-    notify('success', 'Product added (local demo)')
   }
 
-  const deleteItem = (id) => {
-    setItems((i) => i.filter((x) => x.id !== id))
-    notify('success', 'Product deleted (local demo)')
+  const deleteItem = async (id) => {
+    try {
+      await removeProduct(id)
+      notify('success', 'Product deleted')
+    } catch (e) {
+      console.error(e)
+      notify('error', 'Failed to delete product')
+    }
   }
 
   const onUploadCSV = async (ev) => {
@@ -61,9 +71,16 @@ export default function AdminProducts() {
     if (badRows.length) {
       notify('error', `CSV errors in ${badRows.length} row(s)`)
     } else {
-      notify('success', `Imported ${parsed.length} product(s)`)
+      try {
+        for (const row of parsed) {
+          await addOrUpdateProduct({ name: row.name, slug: row.slug, price: row.price })
+        }
+        notify('success', `Imported ${parsed.length} product(s)`)
+      } catch (e) {
+        console.error(e)
+        notify('error', 'Failed to import some products')
+      }
     }
-    setItems((i) => [...parsed, ...i])
     fileRef.current.value = ''
   }
 
@@ -71,33 +88,16 @@ export default function AdminProducts() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Products</h1>
 
-      {/* Real-time notifications */}
-      <div aria-live="polite" aria-atomic="true" className="fixed right-4 top-4 space-y-2 z-50">
-        {toasts.map(t => (
-          <div key={t.id} role="alert" className={`rounded-md px-3 py-2 shadow-premium text-white ${t.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
-            {t.message}
-          </div>
-        ))}
-      </div>
+  {/* Toasts handled globally by ToastProvider */}
 
       {/* Create form */}
       <form onSubmit={addItem} className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3" noValidate>
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium">Name</label>
-          <input id="name" name="name" value={form.name} onChange={onChange} required aria-required className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2" aria-invalid={!!errors.name} aria-describedby={errors.name ? 'name-error' : undefined} />
-          {errors.name && <p id="name-error" role="alert" className="mt-1 text-sm text-red-600">{errors.name}</p>}
+        <InputField name="name" label="Name" value={form.name} onChange={onChange} required error={errors.name} />
+        <InputField name="slug" label="Slug" value={form.slug} onChange={onChange} required error={errors.slug} />
+        <InputField name="price" label="Price (₹)" value={form.price} onChange={onChange} required error={errors.price} />
+        <div className="sm:w-48">
+          <SubmitButton>Add Product</SubmitButton>
         </div>
-        <div>
-          <label htmlFor="slug" className="block text-sm font-medium">Slug</label>
-          <input id="slug" name="slug" value={form.slug} onChange={onChange} required aria-required className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2" aria-invalid={!!errors.slug} aria-describedby={errors.slug ? 'slug-error' : undefined} />
-          {errors.slug && <p id="slug-error" role="alert" className="mt-1 text-sm text-red-600">{errors.slug}</p>}
-        </div>
-        <div>
-          <label htmlFor="price" className="block text-sm font-medium">Price (₹)</label>
-          <input id="price" name="price" value={form.price} onChange={onChange} required aria-required inputMode="decimal" className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2" aria-invalid={!!errors.price} aria-describedby={errors.price ? 'price-error' : undefined} />
-          {errors.price && <p id="price-error" role="alert" className="mt-1 text-sm text-red-600">{errors.price}</p>}
-        </div>
-        <button className="btn btn-primary" type="submit">Add Product</button>
       </form>
 
       {/* CSV upload */}
@@ -122,7 +122,7 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody>
-              {items.map((p) => (
+              {(products || []).map((p) => (
                 <tr key={p.id} className="border-t border-neutral-200">
                   <td className="py-2 pr-4">{p.name}</td>
                   <td className="py-2 pr-4">{p.slug}</td>
@@ -132,7 +132,7 @@ export default function AdminProducts() {
                   </td>
                 </tr>
               ))}
-              {items.length === 0 && (
+              {(products || []).length === 0 && (
                 <tr>
                   <td colSpan={4} className="py-3 text-neutral-600">No products yet. Add or import CSV.</td>
                 </tr>
@@ -140,6 +140,7 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
+        {loading && <div className="mt-3 text-neutral-600">Loading…</div>}
       </div>
     </div>
   )

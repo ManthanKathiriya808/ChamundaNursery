@@ -27,6 +27,7 @@ export default function AdminSidebar() {
         <li><NavLink className="link-hover inline-block px-3 py-2 rounded hover:bg-neutral-100" to="/admin/orders">Orders</NavLink></li>
         <li><NavLink className="link-hover inline-block px-3 py-2 rounded hover:bg-neutral-100" to="/admin/users">Users</NavLink></li>
         <li><NavLink className="link-hover inline-block px-3 py-2 rounded hover:bg-neutral-100" to="/admin/reviews">Reviews</NavLink></li>
+        <li><NavLink className="link-hover inline-block px-3 py-2 rounded hover:bg-neutral-100" to="/admin/bulk-upload">Bulk Upload</NavLink></li>
       </ul>
     </nav>
   )

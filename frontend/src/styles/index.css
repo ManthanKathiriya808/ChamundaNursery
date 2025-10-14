@@ -6,10 +6,16 @@
 /* Global CSS variables to reinforce premium look */
 :root {
   color-scheme: light;
-  --color-primary: #22c55e; /* Tailwind green-500 */
-  --color-primaryDark: #15803d; /* green-700 */
-  --color-accent: #facc15; /* yellow-400 */
+  --color-primary: #22c55e; /* Primary Green */
+  --color-primaryDark: #15803d; /* Green-700 */
+  --color-accent: #fde68a; /* Yellow Accent */
+  --color-earth: #8d6e63; /* Soft Earth Brown */
   --radius: 14px;
+}
+
+/* Apply body font globally */
+@layer base {
+  body { @apply font-body; }
 }
 
 /* Reusable button styles with smooth hover transitions */
@@ -23,7 +29,10 @@
   @apply border border-primary text-primary hover:bg-primary/10 hover:text-primary bg-white;
 }
 .btn-accent {
-  @apply bg-accent text-neutral-900 hover:bg-accentLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent;
+  @apply bg-accent text-neutral-900 hover:bg-accentStrong focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent;
+}
+.btn-earth {
+  @apply bg-earth text-white hover:bg-earthDeep focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-earth;
 }
 .btn-white {
   @apply bg-white text-neutral-900 border border-neutral-200 hover:bg-neutral-100 hover:text-neutral-900;
@@ -46,15 +55,41 @@
 }
 
 /* Typography utilities */
-.heading-hero { @apply font-display text-4xl md:text-6xl font-normal tracking-tight; }
-.heading-section { @apply font-display text-3xl md:text-4xl font-normal; }
+.heading-hero { @apply font-display text-5xl md:text-7xl font-normal tracking-tight; }
+.heading-section { @apply font-display text-4xl md:text-5xl font-normal; }
 .text-body { @apply font-body text-neutral-700 leading-relaxed; }
-.text-serif-soft { @apply font-serifSoft text-neutral-800; }
+/* Use body font for soft text accents; serifSoft was removed */
+.text-serif-soft { @apply font-body text-neutral-800; }
 
 /* Card and surface utilities */
 .surface { @apply rounded-xl border border-neutral-200 bg-white shadow-soft; }
 .surface-hover { @apply transition ease-soft hover:shadow-premium; }
 
+/* Pastel background: use Tailwind utilities directly (bg-pastel-green, etc.) */
+
 /* Badge styles */
 .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700; }
 .badge-primary { @apply bg-primary/10 text-primary; }
+
+/*
+  Form Utilities (accessible, consistent)
+  - Use `.field` as the wrapper for each input+label+message block.
+  - `.label` ensures readable, clickable labels tied via htmlFor/id.
+  - `.input` is the base control; `.input-bordered` adds a neutral border and
+    smooth focus ring. Colors reference CSS variables for brand consistency.
+  - `.hint` provides helpful guidance; `.error` is announced via role="alert".
+  - Spacing scale: inputs use `px-3 py-2`, labels `mb-1`, fields `space-y-1.5`.
+  Accessibility notes:
+  - Always associate labels (`<label htmlFor>`) and inputs (`id`).
+  - Set `aria-invalid` when errors exist, and `aria-describedby` to hint/error.
+  - Respect reduced motion; avoid aggressive animations.
+*/
+.field { @apply space-y-1.5; }
+.label { @apply block text-sm font-medium text-neutral-800 mb-1; }
+.input { @apply w-full rounded-md bg-white text-neutral-900 placeholder-neutral-400; }
+.input-bordered { @apply border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-200 ease-soft; }
+.hint { @apply text-xs text-neutral-500; }
+.error { @apply mt-1 text-sm text-red-600; }
+
+/* Visually hidden utility (prefer Tailwind's `sr-only` where possible) */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

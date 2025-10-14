@@ -9,19 +9,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Nature, Premium & Friendly palette
-        primary: '#22c55e', // Tailwind green-500
-        primaryDark: '#15803d', // green-700
-        primaryLight: '#86efac', // green-300
-        accent: '#facc15', // yellow-400
-        accentLight: '#fde68a', // yellow-300/200
-        accentSoft: '#fef9c3', // soft yellow
-        cream: '#f9fafb', // natural white/gray-50
-        softGray: '#f3f4f6', // gray-100/200
-        earth: '#795548', // brown
-        earthLight: '#8d6e63', // brown light
-        sage: '#a7c957', // wellness-focused green
-        olive: '#7c9473', // muted olive
+        // Nature, Premium & Friendly palette (matching reference sites)
+        primary: '#22c55e', // Primary Green
+        primaryDark: '#15803d', // Green-700
+        primaryLight: '#86efac', // Green-300
+        accent: '#fde68a', // Yellow Accent (soft)
+        accentStrong: '#facc15', // Deeper Yellow for emphasis
+        accentSoft: '#fef9c3', // Soft yellow background
+        cream: '#f9fafb', // Cream / natural white
+        softGray: '#f3f4f6', // Content background
+        earth: '#8d6e63', // Soft Earth Brown
+        earthDeep: '#795548', // Deeper earth tone
+        pastel: {
+          green: '#EAF8ED',
+          yellow: '#FFF8E1',
+          brown: '#EFE7E3',
+          gray: '#F5F7FA'
+        },
         neutral: {
           50: '#fafaf9',
           100: '#f5f5f4',
@@ -36,17 +40,49 @@ module.exports = {
         }
       },
       fontFamily: {
-        display: ['"DM Serif Display"', 'serif'],
-        body: ['"Nunito Sans"', 'system-ui', 'sans-serif'],
-        serifSoft: ['"Merriweather"', '"Lora"', 'serif']
+        // Modern, friendly headings and body
+        display: ['"Jost"', '"Montserrat"', '"Poppins"', 'system-ui', 'sans-serif'],
+        body: ['"Jost"', '"Montserrat"', '"Poppins"', 'system-ui', 'sans-serif']
       },
       boxShadow: {
-        premium: '0 10px 25px -5px rgba(46, 125, 50, 0.20), 0 8px 10px -6px rgba(46, 125, 50, 0.15)',
-        soft: '0 6px 20px rgba(0,0,0,0.06)'
+        premium: '0 12px 28px -12px rgba(0,0,0,0.18)',
+        soft: '0 6px 20px rgba(0,0,0,0.06)',
+        card: '0 8px 24px -8px rgba(0,0,0,0.12)'
       },
       transitionTimingFunction: {
         soft: 'cubic-bezier(0.22, 1, 0.36, 1)',
         spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+      },
+      zIndex: {
+        60: '60',
+        70: '70',
+        80: '80',
+        90: '90',
+        100: '100'
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translate3d(0, 18px, 0)' },
+          '100%': { opacity: '1', transform: 'translate3d(0, 0, 0)' }
+        },
+        fadeInLeft: {
+          '0%': { opacity: '0', transform: 'translate3d(-18px, 0, 0)' },
+          '100%': { opacity: '1', transform: 'translate3d(0, 0, 0)' }
+        },
+        fadeInRight: {
+          '0%': { opacity: '0', transform: 'translate3d(18px, 0, 0)' },
+          '100%': { opacity: '1', transform: 'translate3d(0, 0, 0)' }
+        }
+      },
+      animation: {
+        fadeIn: 'fadeIn 0.6s ease-soft both',
+        fadeInUp: 'fadeInUp 0.6s ease-soft both',
+        fadeInLeft: 'fadeInLeft 0.6s ease-soft both',
+        fadeInRight: 'fadeInRight 0.6s ease-soft both'
       }
     }
   },

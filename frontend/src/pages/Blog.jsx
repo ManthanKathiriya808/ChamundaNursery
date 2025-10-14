@@ -6,23 +6,18 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import ImageLazy from '../components/ImageLazy.jsx'
 import { SkeletonBox } from '../components/Skeleton.jsx'
-
-const demoArticles = Array.from({ length: 6 }).map((_, i) => ({
-  id: i + 1,
-  title: `Plant Care Guide ${i + 1}`,
-  summary: 'Learn tips and tricks to keep your plants healthy.',
-  img: '/logo.png'
-}))
+import { useData } from '../context/DataProvider.jsx'
+import { motion, useReducedMotion } from 'framer-motion'
 
 export default function Blog() {
-  const [loading, setLoading] = useState(true)
+  const { blogs, loading } = useData()
   const [articles, setArticles] = useState([])
   const cardsRef = useRef([])
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => {
-    // Simulate asynchronous fetch
-    setTimeout(() => { setArticles(demoArticles); setLoading(false) }, 700)
-  }, [])
+    setArticles(Array.isArray(blogs) ? blogs.slice(0, 9) : [])
+  }, [blogs])
 
   useEffect(() => {
     const io = new IntersectionObserver((entries) => {
@@ -40,7 +35,18 @@ export default function Blog() {
     <div className="page-container">
       <Helmet>
         <title>Blog • Chamunda Nursery</title>
-        <meta name="description" content="Plant care guides and articles" />
+        <meta name="description" content="Plant care guides, tips, and articles for healthy plants." />
+        <link rel="canonical" href={typeof window !== 'undefined' ? window.location.href : 'https://example.com/blog'} />
+        <script type="application/ld+json">{JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          itemListElement: articles.map((a, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `https://example.com/blog/${a.slug || a.id}`,
+            name: a.title,
+          })),
+        })}</script>
       </Helmet>
       <h1 className="text-2xl font-semibold mb-4">Plant Care Guides</h1>
       {loading ? (
@@ -56,15 +62,19 @@ export default function Blog() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {articles.map((a, i) => (
-            <article
+            <motion.article
               key={a.id}
               ref={(el) => (cardsRef.current[i] = el)}
-              className="opacity-0 translate-y-2 transition duration-500 ease-soft rounded-lg border border-neutral-200 bg-white p-3"
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              whileInView={reduceMotion ? {} : { opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.4 }}
+              className="rounded-lg border border-neutral-200 bg-white p-3"
             >
-              <ImageLazy src={a.img} alt={a.title} className="h-32 w-full object-cover rounded-md bg-neutral-100" />
+              <ImageLazy src={a.coverImage || a.img} alt={a.title} className="h-32 w-full object-cover rounded-md bg-neutral-100" />
               <h2 className="mt-3 font-semibold">{a.title}</h2>
-              <p className="text-neutral-700 text-sm">{a.summary}</p>
-            </article>
+              <p className="text-neutral-700 text-sm">{a.excerpt || a.summary}</p>
+            </motion.article>
           ))}
         </div>
       )}

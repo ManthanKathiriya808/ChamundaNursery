@@ -9,6 +9,8 @@ import UserProvider from './hooks/UserProvider.jsx'
 import CartProvider from './hooks/CartProvider.jsx'
 import ToastProvider from './components/ToastProvider.jsx'
 import './styles/index.css'
+import DataProvider from './context/DataProvider.jsx'
+import RequireAuth from './routes/RequireAuth.jsx'
 
 // Lazy-load main pages for performance
 const Home = React.lazy(() => import('./pages/Home.jsx'))
@@ -28,14 +30,17 @@ const Terms = React.lazy(() => import('./pages/Terms.jsx'))
 const Privacy = React.lazy(() => import('./pages/Privacy.jsx'))
 const Legal = React.lazy(() => import('./pages/Legal.jsx'))
 const Blog = React.lazy(() => import('./pages/Blog.jsx'))
+const Care = React.lazy(() => import('./pages/Care.jsx'))
 // Lazy-load admin pages and layout
 const AdminLayout = React.lazy(() => import('./admin/AdminLayout.jsx'))
+import RequireAdmin from './routes/RequireAdmin.jsx'
 const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard.jsx'))
 const AdminProducts = React.lazy(() => import('./admin/Products.jsx'))
 const AdminCategories = React.lazy(() => import('./admin/Categories.jsx'))
 const AdminOrders = React.lazy(() => import('./admin/Orders.jsx'))
 const AdminUsers = React.lazy(() => import('./admin/Users.jsx'))
 const AdminReviews = React.lazy(() => import('./admin/Reviews.jsx'))
+const AdminBulkUpload = React.lazy(() => import('./admin/BulkUpload.jsx'))
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -43,6 +48,7 @@ createRoot(document.getElementById('root')).render(
       <UserProvider>
         <ToastProvider>
         <CartProvider>
+        <DataProvider>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ErrorBoundary>
           {/* Fallback skeleton for lazy-loaded routes */}
@@ -54,7 +60,7 @@ createRoot(document.getElementById('root')).render(
                 <Route path="catalog" element={<Catalog />} />
                 <Route path="product/:id" element={<Product />} />
                 <Route path="cart" element={<Cart />} />
-                <Route path="checkout" element={<Checkout />} />
+                <Route path="checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
                 {/* User pages */}
                 <Route path="account/login" element={<Login />} />
                 <Route path="account/register" element={<Register />} />
@@ -69,20 +75,24 @@ createRoot(document.getElementById('root')).render(
                 <Route path="legal" element={<Legal />} />
                 {/* Blog */}
                 <Route path="blog" element={<Blog />} />
-                {/* Admin routes */}
-                <Route path="admin" element={<AdminLayout />}> 
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="products" element={<AdminProducts />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="reviews" element={<AdminReviews />} />
-                </Route>
+                {/* Care guides */}
+                <Route path="care" element={<Care />} />
+              {/* Admin routes (protected) */}
+              <Route path="admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="reviews" element={<AdminReviews />} />
+                <Route path="bulk-upload" element={<AdminBulkUpload />} />
+              </Route>
               </Route>
             </Routes>
           </Suspense>
           </ErrorBoundary>
         </BrowserRouter>
+        </DataProvider>
         </CartProvider>
         </ToastProvider>
       </UserProvider>

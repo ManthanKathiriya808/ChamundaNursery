@@ -18,6 +18,9 @@ export default function CartProvider({ children }) {
     }
   })
 
+  // Cart drawer state for slide-in sidebar/modal
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
   useEffect(() => {
     try {
       localStorage.setItem('cart.items', JSON.stringify(items))
@@ -40,8 +43,12 @@ export default function CartProvider({ children }) {
   const updateQty = (id, qty) => setItems((prev) => prev.map((i) => (String(i.id) === String(id) ? { ...i, qty: Math.max(1, qty) } : i)))
   const clear = () => setItems([])
 
+  const openDrawer = () => setDrawerOpen(true)
+  const closeDrawer = () => setDrawerOpen(false)
+  const toggleDrawer = () => setDrawerOpen((o) => !o)
+
   const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 1), 0)
 
-  const value = useMemo(() => ({ items, add, remove, updateQty, clear, subtotal }), [items, subtotal])
+  const value = useMemo(() => ({ items, add, remove, updateQty, clear, subtotal, drawerOpen, openDrawer, closeDrawer, toggleDrawer }), [items, subtotal, drawerOpen])
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

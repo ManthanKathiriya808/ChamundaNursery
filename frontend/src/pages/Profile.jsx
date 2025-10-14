@@ -2,9 +2,11 @@ import React from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import useUser from '../hooks/useUser.js'
+import { useData } from '../context/DataProvider.jsx'
 
 export default function Profile() {
   const { user, logout } = useUser()
+  const { user: profile } = useData()
   return (
     <div className="page-container max-w-2xl">
       <Helmet>
@@ -20,6 +22,12 @@ export default function Profile() {
         <div className="rounded-lg border border-neutral-200 bg-white p-4 space-y-3">
           <h1 className="text-2xl font-semibold">Welcome, {user.name}</h1>
           <p className="text-neutral-700">Email: {user.email}</p>
+          {profile && (
+            <div className="text-neutral-700 text-sm">
+              {profile.phone && <p>Phone: {profile.phone}</p>}
+              {profile.address && <p>Address: {profile.address}</p>}
+            </div>
+          )}
           <div className="flex gap-2">
             <Link className="btn btn-outline" to="/account/orders">View Orders</Link>
             <button className="btn btn-primary" onClick={logout}>Logout</button>

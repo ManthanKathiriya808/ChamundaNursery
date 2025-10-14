@@ -3,28 +3,43 @@ import React, { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useCart } from '../hooks/CartProvider.jsx'
 import { useToast } from '../components/ToastProvider.jsx'
+import { InputField, SubmitButton } from '../components/forms'
 
 export default function Checkout() {
   const { items, subtotal, clear } = useCart()
   const toast = useToast()
   const [form, setForm] = useState({ name: '', phone: '', address: '', city: '', postal: '' })
+  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
   const [pay, setPay] = useState('card')
   const shipping = useMemo(() => (subtotal > 499 ? 0 : 99), [subtotal])
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping])
 
+  const validate = () => {
+    const errs = {}
+    if (!form.name.trim()) errs.name = 'Full name is required'
+    if (!form.phone.match(/^\+?[0-9\- ]{7,}$/)) errs.phone = 'Valid phone is required'
+    if (!form.address.trim()) errs.address = 'Address is required'
+    if (!form.city.trim()) errs.city = 'City is required'
+    if (!form.postal.trim()) errs.postal = 'Postal code is required'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const onSubmit = (ev) => {
     ev.preventDefault()
-    if (!form.name || !form.phone || !form.address || !form.city || !form.postal) {
-      toast.push('error', 'Please fill all shipping details')
-      return
-    }
+    if (!validate()) { toast.push('error', 'Please fix errors in shipping details'); return }
     if (items.length === 0) {
       toast.push('error', 'Your cart is empty')
       return
     }
     // Placeholder: integrate real payments/order creation
-    toast.push('success', 'Order placed successfully')
-    clear()
+    setSubmitting(true)
+    setTimeout(() => {
+      toast.push('success', 'Order placed successfully')
+      clear()
+      setSubmitting(false)
+    }, 1000)
   }
   return (
     <div className="page-container">
@@ -34,15 +49,15 @@ export default function Checkout() {
       </Helmet>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Steps */}
-        <form onSubmit={onSubmit} className="lg:col-span-2 space-y-4">
+        <form onSubmit={onSubmit} className="lg:col-span-2 space-y-4" noValidate>
           <div className="rounded-lg border border-neutral-200 bg-white p-4">
             <h2 className="font-semibold mb-3">1. Shipping Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input className="input input-bordered" placeholder="Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input className="input input-bordered" placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              <input className="input input-bordered md:col-span-2" placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-              <input className="input input-bordered" placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-              <input className="input input-bordered" placeholder="Postal Code" value={form.postal} onChange={(e) => setForm({ ...form, postal: e.target.value })} />
+              <InputField name="name" label="Full Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required error={errors.name} />
+              <InputField name="phone" label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required error={errors.phone} />
+              <InputField className="md:col-span-2" name="address" label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required error={errors.address} />
+              <InputField name="city" label="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required error={errors.city} />
+              <InputField name="postal" label="Postal Code" value={form.postal} onChange={(e) => setForm({ ...form, postal: e.target.value })} required error={errors.postal} />
             </div>
           </div>
           <div className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -53,20 +68,22 @@ export default function Checkout() {
               <label className="flex items-center gap-2"><input type="radio" name="pay" checked={pay === 'cod'} onChange={() => setPay('cod')} /> Cash on Delivery</label>
               {pay === 'card' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                  <input className="input input-bordered" placeholder="Card Number" />
-                  <input className="input input-bordered" placeholder="Expiry MM/YY" />
-                  <input className="input input-bordered" placeholder="CVV" />
+                  <InputField name="card" label="Card Number" placeholder="1234 5678 9012 3456" />
+                  <InputField name="expiry" label="Expiry MM/YY" placeholder="07/27" />
+                  <InputField name="cvv" label="CVV" placeholder="123" />
                 </div>
               )}
               {pay === 'upi' && (
                 <div className="grid grid-cols-1 gap-3 mt-2">
-                  <input className="input input-bordered" placeholder="UPI ID (name@bank)" />
+                  <InputField name="upi" label="UPI ID" placeholder="name@bank" />
                 </div>
               )}
             </div>
           </div>
           <div className="flex justify-end">
-            <button type="submit" className="btn btn-primary">Place Order</button>
+            <div className="w-full sm:w-auto">
+              <SubmitButton loading={submitting}>Place Order</SubmitButton>
+            </div>
           </div>
         </form>
 

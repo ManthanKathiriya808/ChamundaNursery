@@ -1,19 +1,30 @@
 // Product detail page with sections and accessible layout
 import React, { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import ImageLazy from '../components/ImageLazy.jsx'
-import { fetchProductById, fetchProducts } from '../services/api.js'
+import { recordRecentlyViewed } from '../services/api.js'
+import { useData } from '../context/DataProvider.jsx'
 import { StarIcon } from '@heroicons/react/24/solid'
 import ProductCard from '../components/ProductCard.jsx'
 import { ProductCardSkeleton } from '../components/Skeleton.jsx'
 import { useCart } from '../hooks/CartProvider.jsx'
 import { useToast } from '../components/ToastProvider.jsx'
+import useUser from '../hooks/useUser.js'
+import Tabs from '../components/Tabs.jsx'
+import RelatedCarousel from '../components/RelatedCarousel.jsx'
+import FrequentlyBoughtTogether from '../components/FrequentlyBoughtTogether.jsx'
+import { motion } from 'framer-motion'
+import RecentlyViewed from '../components/RecentlyViewed.jsx'
 
 export default function Product() {
   const { id } = useParams()
+  const { getById, products, loading: dataLoading } = useData()
   const cart = useCart()
   const toast = useToast()
+  const { user } = useUser()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -23,33 +34,51 @@ export default function Product() {
   const [qty, setQty] = useState(1)
 
   useEffect(() => {
+    let mounted = true
     setLoading(true)
     setError('')
-    fetchProductById(id)
-      .then((data) => setItem(data))
-      .catch((e) => { console.error(e); setError('Failed to load product') })
-      .finally(() => setLoading(false))
-  }, [id])
+    Promise.resolve(getById(id))
+      .then((data) => { if (mounted) setItem(data) })
+      .catch((e) => { console.error(e); if (mounted) setError('Failed to load product') })
+      .finally(() => { if (mounted) setLoading(false) })
+    return () => { mounted = false }
+  }, [id, getById])
 
   useEffect(() => {
     if (!item) return
     setRelLoading(true)
-    fetchProducts({ limit: 8, category: item.category })
-      .then((data) => setRelated(Array.isArray(data) ? data : data?.items || []))
-      .catch((e) => { console.error(e); setRelated([]) })
-      .finally(() => setRelLoading(false))
+    try {
+      const rel = (products || [])
+        .filter((p) => p.id !== item.id && (!item.category || p.category === item.category))
+        .slice(0, 8)
+      setRelated(rel)
+    } catch (e) {
+      console.error(e)
+      setRelated([])
+    } finally {
+      setRelLoading(false)
+    }
+  }, [item, products])
+
+  // Record recently viewed (advanced state side-effect)
+  useEffect(() => {
+    if (item?.id) recordRecentlyViewed(item.id).catch(() => {})
   }, [item])
 
   const images = useMemo(() => {
     const base = []
     if (item?.image) base.push(item.image)
-    // Fallback demo images to simulate gallery
+    else if (Array.isArray(item?.images) && item.images.length) base.push(item.images[0])
+    else if (item?.thumbnail) base.push(item.thumbnail)
     while (base.length < 4) base.push('/logo.png')
     return base
   }, [item])
 
-  const rating = Number(item?.rating || 4.5)
-  const reviews = Number(item?.reviews || 28)
+  const rating = Number(item?.rating ?? 4.5)
+  const reviews = Number(item?.reviews ?? item?.reviewsCount ?? 28)
+  const mrp = Number(item?.mrp) || Math.round((Number(item?.price) || 0) * 1.2)
+  const savings = Math.max(0, mrp - Number(item?.price || 0))
+  const offerPercent = mrp ? Math.round((savings / mrp) * 100) : 0
 
   return (
     <div className="page-container">
@@ -61,7 +90,7 @@ export default function Product() {
         {error && (
           <div className="lg:col-span-2 rounded border border-red-200 bg-red-50 p-3 text-red-700">{error}</div>
         )}
-        {loading && (
+        {(loading || dataLoading) && (
           <div className="lg:col-span-2 p-4 text-neutral-600">Loading…</div>
         )}
         {!loading && item && (
@@ -109,6 +138,11 @@ export default function Product() {
                 </div>
               </div>
 
+              <div className="flex flex-wrap items-center gap-2">
+                {offerPercent > 0 && <span className="badge badge-primary">Save {offerPercent}%</span>}
+                <span className="badge bg-green-100 text-primary">Free shipping over ₹499</span>
+                {mrp > (item.price || 0) && <span className="text-neutral-600 text-sm">MRP: <span className="line-through">₹{mrp}</span></span>}
+              </div>
               <p className="text-serif-soft">{item.description || 'Premium plant with great care needs. Ideal for home and garden.'}</p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -137,25 +171,44 @@ export default function Product() {
               </div>
 
               <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-soft">
-                <h3 className="font-semibold mb-2">Reviews</h3>
-                <p className="text-sm text-neutral-700">No reviews yet.</p>
+                <Tabs
+                  items={[
+                    { label: 'Care', content: (
+                      <ul className="text-sm text-neutral-700 space-y-1">
+                        <li>Water twice a week</li>
+                        <li>Indirect sunlight</li>
+                        <li>Fertilize monthly</li>
+                      </ul>
+                    )},
+                    { label: 'Description', content: (
+                      <p className="text-sm text-neutral-700">{item.description || 'Premium plant with vibrant foliage, perfect for homes and offices.'}</p>
+                    )},
+                    { label: 'Reviews', content: (
+                      <p className="text-sm text-neutral-700">No reviews yet.</p>
+                    )},
+                  ]}
+                />
               </div>
 
               <div className="mt-4">
-                <h3 className="font-semibold mb-2">Related Products</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {relLoading && Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}
-                  {!relLoading && related.slice(0, 4).map((p) => (
-                    <ProductCard key={p.id || p._id} id={p.id || p._id} name={p.name} price={p.price} image={p.image} />
-                  ))}
-                </div>
+                <FrequentlyBoughtTogether items={related.slice(0, 3)} />
+                {relLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    {Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+                  </div>
+                ) : (
+                  <RelatedCarousel items={related.slice(0, 8)} />
+                )}
               </div>
             </div>
 
             {/* Sticky Buy Panel */}
             <aside className="lg:col-span-1">
               <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-premium lg:sticky lg:top-20">
-                <div className="text-2xl font-semibold">₹{item.price}</div>
+                <div className="flex items-baseline gap-3">
+                  <div className="text-2xl font-semibold">₹{item.price}</div>
+                  {mrp > (item.price || 0) && <div className="text-neutral-500 line-through">₹{mrp}</div>}
+                </div>
                 <p className="mt-1 text-sm text-neutral-700">Inclusive of all taxes</p>
                 <div className="mt-4 flex items-center gap-3">
                   <span className="text-sm">Quantity</span>
@@ -166,17 +219,23 @@ export default function Product() {
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
+                  <motion.button
                     className="btn btn-primary w-full"
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       if (!item) return
+                      if (!user?.isAuthenticated) {
+                        navigate('/account/login', { state: { from: location } })
+                        return
+                      }
                       cart.add({ id: item.id || id, name: item.name, price: item.price, image: item.image }, qty)
                       toast.push('success', 'Added to cart')
+                      cart.openDrawer()
                     }}
                   >
                     Add to Cart
-                  </button>
-                  <button className="btn btn-accent w-full">Buy Now</button>
+                  </motion.button>
+                  <Link to="/checkout" className="btn btn-accent w-full">Buy Now</Link>
                 </div>
                 <div className="mt-4 rounded-lg bg-primary/10 text-primary p-3 text-sm">
                   Free shipping on orders over ₹499 • Secure payments
@@ -186,6 +245,8 @@ export default function Product() {
           </>
         )}
       </div>
+      {/* Recently viewed section */}
+      <RecentlyViewed />
     </div>
   )
 }

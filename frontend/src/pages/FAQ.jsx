@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Helmet } from 'react-helmet-async'
+import Accordion from '../components/ui/Accordion.jsx'
 
 const faqs = [
   { q: 'How do I care for indoor plants?', a: 'Provide indirect sunlight, water moderately, and ensure drainage.' },
@@ -7,7 +8,6 @@ const faqs = [
 ]
 
 export default function FAQ() {
-  const [open, setOpen] = useState(0)
   return (
     <div className="page-container max-w-2xl">
       <Helmet>
@@ -15,18 +15,10 @@ export default function FAQ() {
         <meta name="description" content="Frequently asked questions" />
       </Helmet>
       <h1 className="text-2xl font-semibold mb-4">Frequently Asked Questions</h1>
-      <ul className="space-y-3">
-        {faqs.map((item, i) => (
-          <li key={i} className="rounded-lg border border-neutral-200 bg-white">
-            <button
-              className="w-full text-left p-3 font-medium"
-              aria-expanded={open === i}
-              onClick={() => setOpen(open === i ? -1 : i)}
-            >{item.q}</button>
-            {open === i && <div className="p-3 text-serif-soft">{item.a}</div>}
-          </li>
-        ))}
-      </ul>
+      <Accordion
+        items={faqs.map((f) => ({ title: f.q, content: f.a }))}
+        className="mt-2"
+      />
     </div>
   )
 }
