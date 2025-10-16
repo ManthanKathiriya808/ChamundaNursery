@@ -1,6 +1,7 @@
 // Chamunda Nursery homepage assembled with animated sections
 import React from 'react'
 import { Helmet } from 'react-helmet-async'
+import { motion } from 'framer-motion'
 import BannerSlider from '../components/BannerSlider.jsx'
 import CollectionGrid from '../components/CollectionGrid.jsx'
 import PromoBanners from '../components/PromoBanners.jsx'
@@ -15,13 +16,28 @@ import FullWidthSection from '../components/ui/FullWidthSection.jsx'
 import ColorBand from '../components/ui/ColorBand.jsx'
 import Testimonials from '../components/Testimonials.jsx'
 import RecentlyViewed from '../components/RecentlyViewed.jsx'
+import ImageCarousel from '../components/ui/ImageCarousel.jsx'
+import ProductCarousel from '../components/ProductCarousel.jsx'
 import { useData } from '../context/DataProvider.jsx'
+import { useScrollAnimation, useStaggerAnimation } from '../hooks/useScrollAnimation.js'
 
 export default function Home() {
-  const { heroSlides, testimonials } = useData()
+  const { heroSlides, testimonials, products } = useData()
   const carouselItems = Array.isArray(testimonials)
     ? testimonials.map((t) => ({ name: t.name, quote: t.comment || t.quote, role: t.location || t.role }))
     : undefined
+
+  // Animation hooks for different sections
+  const collectionsAnimation = useScrollAnimation()
+  const featuredAnimation = useScrollAnimation()
+  const careAnimation = useScrollAnimation()
+  const promosAnimation = useScrollAnimation()
+  const testimonialsAnimation = useScrollAnimation()
+  const trustAnimation = useScrollAnimation()
+  const blogAnimation = useScrollAnimation()
+  const featureCardsAnimation = useStaggerAnimation()
+  const recentlyViewedAnimation = useScrollAnimation()
+  const newsletterAnimation = useScrollAnimation()
 
   return (
     <div>
@@ -55,39 +71,105 @@ export default function Home() {
       />
 
       {/* Collections (existing) */}
-      <CollectionGrid />
+      <motion.div
+        ref={collectionsAnimation.ref}
+        variants={collectionsAnimation.variants.fadeUp}
+        initial="hidden"
+        animate={collectionsAnimation.inView ? "visible" : "hidden"}
+      >
+        <CollectionGrid />
+      </motion.div>
+
+      {/* Featured Products Carousel */}
+      <motion.section 
+        ref={featuredAnimation.ref}
+        variants={featuredAnimation.variants.fadeUp}
+        initial="hidden"
+        animate={featuredAnimation.inView ? "visible" : "hidden"}
+        className="py-16 bg-gradient-to-b from-green-50 to-white"
+      >
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Products</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Discover our handpicked selection of premium plants and gardening essentials
+            </p>
+          </div>
+          <ProductCarousel products={products} />
+        </div>
+      </motion.section>
 
       {/* Split section: Care + Tools */}
-      <SplitSection
-        title="Care Made Easy"
-        bullets={[
-          'Step-by-step guides for Indian household plants',
-          'Watering, light, and soil tips from experts',
-          'Curated tools to keep your greens thriving',
-        ]}
-        ctaText="Read Care Guides"
-        onCtaClick={() => (window.location.href = '/care')}
-        media={<img src="/demo/images/care-kit.jpg" alt="Plant care kit" className="w-full h-full object-cover" />}
-      />
+      <motion.div
+        ref={careAnimation.ref}
+        variants={careAnimation.variants.fadeLeft}
+        initial="hidden"
+        animate={careAnimation.inView ? "visible" : "hidden"}
+      >
+        <SplitSection
+          title="Care Made Easy"
+          bullets={[
+            'Step-by-step guides for Indian household plants',
+            'Watering, light, and soil tips from experts',
+            'Curated tools to keep your greens thriving',
+          ]}
+          ctaText="Read Care Guides"
+          onCtaClick={() => (window.location.href = '/care')}
+          media={<img src="/demo/images/care-kit.jpg" alt="Plant care kit" className="w-full h-full object-cover" />}
+        />
+      </motion.div>
 
       {/* Existing promos */}
-      <PromoBanners />
+      <motion.div
+        ref={promosAnimation.ref}
+        variants={promosAnimation.variants.scaleUp}
+        initial="hidden"
+        animate={promosAnimation.inView ? "visible" : "hidden"}
+      >
+        <PromoBanners />
+      </motion.div>
 
       {/* Testimonials carousel */}
-      <div className="mt-8">
+      <motion.div 
+        ref={testimonialsAnimation.ref}
+        variants={testimonialsAnimation.variants.fadeRight}
+        initial="hidden"
+        animate={testimonialsAnimation.inView ? "visible" : "hidden"}
+        className="mt-8"
+      >
         <TestimonialCarousel items={carouselItems && carouselItems.length ? carouselItems : undefined} />
-      </div>
+      </motion.div>
 
       {/* Trust Badges */}
-      <TrustBadges />
+      <motion.div
+        ref={trustAnimation.ref}
+        variants={trustAnimation.variants.fadeUp}
+        initial="hidden"
+        animate={trustAnimation.inView ? "visible" : "hidden"}
+      >
+        <TrustBadges />
+      </motion.div>
 
       {/* Testimonials */}
-      <section className="mt-8">
+      <motion.section 
+        ref={testimonialsAnimation.ref}
+        variants={testimonialsAnimation.variants.fadeUp}
+        initial="hidden"
+        animate={testimonialsAnimation.inView ? "visible" : "hidden"}
+        className="mt-8"
+      >
         <Testimonials />
-      </section>
+      </motion.section>
 
       {/* Blog Preview */}
-      <BlogPreview />
+      <motion.div
+        ref={blogAnimation.ref}
+        variants={blogAnimation.variants.fadeLeft}
+        initial="hidden"
+        animate={blogAnimation.inView ? "visible" : "hidden"}
+      >
+        <BlogPreview />
+      </motion.div>
 
       {/* Full-width soft accent feature band */}
       <FullWidthSection
@@ -96,29 +178,48 @@ export default function Home() {
         subtitle="Curated collections with care tips and tools."
         center
       >
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="rounded-lg bg-white shadow-card p-5">
+        <motion.div 
+          ref={featureCardsAnimation.ref}
+          variants={featureCardsAnimation.containerVariants}
+          initial="hidden"
+          animate={featureCardsAnimation.inView ? "visible" : "hidden"}
+          className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          <motion.div variants={featureCardsAnimation.itemVariants} className="rounded-lg bg-white shadow-card p-5">
             <h3 className="font-medium text-neutral-900">Expert Care Guides</h3>
             <p className="mt-2 text-neutral-700">Step-by-step help to keep your plants thriving.</p>
-          </div>
-          <div className="rounded-lg bg-white shadow-card p-5">
+          </motion.div>
+          <motion.div variants={featureCardsAnimation.itemVariants} className="rounded-lg bg-white shadow-card p-5">
             <h3 className="font-medium text-neutral-900">Curated Collections</h3>
             <p className="mt-2 text-neutral-700">Find the right plant for your space and style.</p>
-          </div>
-          <div className="rounded-lg bg-white shadow-card p-5">
+          </motion.div>
+          <motion.div variants={featureCardsAnimation.itemVariants} className="rounded-lg bg-white shadow-card p-5">
             <h3 className="font-medium text-neutral-900">Trusted Quality</h3>
             <p className="mt-2 text-neutral-700">Healthy plants, secure payments, and fast delivery.</p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </FullWidthSection>
 
       {/* Recently Viewed */}
-      <section className="mt-8">
+      <motion.section 
+        ref={recentlyViewedAnimation.ref}
+        variants={recentlyViewedAnimation.variants.fadeUp}
+        initial="hidden"
+        animate={recentlyViewedAnimation.inView ? "visible" : "hidden"}
+        className="mt-8"
+      >
         <RecentlyViewed title="Keep exploring" />
-      </section>
+      </motion.section>
 
       {/* Newsletter */}
-      <NewsletterSignup />
+      <motion.div
+        ref={newsletterAnimation.ref}
+        variants={newsletterAnimation.variants.scaleUp}
+        initial="hidden"
+        animate={newsletterAnimation.inView ? "visible" : "hidden"}
+      >
+        <NewsletterSignup />
+      </motion.div>
     </div>
   )
 }

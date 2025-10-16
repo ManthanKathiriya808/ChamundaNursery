@@ -32,24 +32,46 @@ export default function DataProvider({ children }) {
   const refreshAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [p, c, t, b, cg, hs, u, o] = await Promise.all([
+      // Check if user is authenticated before fetching protected data
+      const token = localStorage.getItem('auth.token')
+      
+      // Fetch public data that doesn't require authentication
+      const [p, c, t, b, cg, hs] = await Promise.all([
         getProducts(),
         getCollections(),
         getTestimonials(6),
         getBlogs(),
         getCareGuides(),
         getHeroSlides(),
-        getUser(),
-        getOrders(),
       ])
+      
       setProducts(p)
       setCollections(c)
       setTestimonials(t)
       setBlogs(b)
       setCareGuides(cg)
       setHeroSlides(hs)
-      setUser(u)
-      setOrders(o)
+      
+      // Only fetch protected data if authenticated
+      if (token) {
+        try {
+          const [u, o] = await Promise.all([
+            getUser(),
+            getOrders(),
+          ])
+          setUser(u)
+          setOrders(o)
+        } catch (error) {
+          // If auth fails, clear the token and reset user state
+          console.warn('Authentication failed, clearing token:', error)
+          localStorage.removeItem('auth.token')
+          setUser(null)
+          setOrders([])
+        }
+      } else {
+        setUser(null)
+        setOrders([])
+      }
     } finally {
       setLoading(false)
     }

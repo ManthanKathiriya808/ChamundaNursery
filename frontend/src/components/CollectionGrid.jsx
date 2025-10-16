@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useStaggerAnimation } from '../hooks/useScrollAnimation.js'
 
 const categories = [
   { key: 'indoor-plants', label: 'Indoor Plants', image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=1200&auto=format&fit=crop' },
@@ -14,6 +15,9 @@ const categories = [
 ]
 
 export default function CollectionGrid() {
+  // Animation hook for staggered collection cards
+  const collectionAnimation = useStaggerAnimation()
+
   return (
     <section aria-labelledby="collections-heading" className="py-6 md:py-10">
       <div className="page-container">
@@ -21,14 +25,17 @@ export default function CollectionGrid() {
           <h2 id="collections-heading" className="heading-section">Shop by Collection</h2>
           <Link to="/catalog" className="btn btn-link">View all</Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+        <motion.div 
+          ref={collectionAnimation.ref}
+          variants={collectionAnimation.containerVariants}
+          initial="hidden"
+          animate={collectionAnimation.inView ? "visible" : "hidden"}
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4"
+        >
           {categories.map((c, idx) => (
             <Link key={c.key} to={`/catalog?category=${encodeURIComponent(c.key)}`} className="group block">
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.35, delay: idx * 0.03, ease: 'easeOut' }}
+                variants={collectionAnimation.itemVariants}
                 className="surface p-0 overflow-hidden rounded-xl"
               >
                 <div className="relative">
@@ -46,7 +53,7 @@ export default function CollectionGrid() {
               </motion.div>
             </Link>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

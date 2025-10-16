@@ -6,16 +6,66 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Menu, X, Home, Grid3X3, FileText, User, ShoppingCart, ShieldCheck, Phone, HelpCircle, ChevronDown, Heart, Sprout } from 'lucide-react'
 import { useCart } from '../hooks/CartProvider.jsx'
 import useUser from '../hooks/useUser.js'
+import { useData } from '../context/DataProvider.jsx'
+import HamburgerMenu from './animations/HamburgerMenu.jsx'
+import DropdownMenu from './ui/DropdownMenu.jsx'
+import CartIcon from './animations/CartIcon.jsx'
+import SearchBar from './ui/SearchBar.jsx'
 
 export default function Header() {
   // Modern ecommerce header with top announcement, main bar, and category nav
   const [mobileOpen, setMobileOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const { openDrawer, items } = useCart()
   const { user, logout } = useUser()
+  const { products } = useData()
   const reduceMotion = useReducedMotion()
   const accountRef = useRef(null)
   const headerRef = useRef(null)
+
+  // Generate categories from products
+  const categories = React.useMemo(() => {
+    if (!products || products.length === 0) return []
+    
+    const categoryMap = new Map()
+    
+    products.forEach(product => {
+      if (product.category) {
+        const existing = categoryMap.get(product.category)
+        if (existing) {
+          existing.count += 1
+        } else {
+          categoryMap.set(product.category, {
+            id: product.category.toLowerCase().replace(/\s+/g, '-'),
+            name: product.category,
+            count: 1
+          })
+        }
+      }
+    })
+    
+    return Array.from(categoryMap.values()).sort((a, b) => b.count - a.count)
+  }, [products])
+
+  // Handle scroll for smart sticky behavior
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Sample search suggestions (in production, fetch from API)
+  const searchSuggestions = [
+    'Indoor Plants', 'Outdoor Plants', 'Bonsai Trees', 'Fruit Plants',
+    'Vegetable Seeds', 'Garden Tools', 'Plant Pots', 'Fertilizers',
+    'Succulents', 'Flowering Plants', 'Herbs', 'Bamboo Plants'
+  ]
+
+  // Sample recent searches (in production, get from localStorage or user data)
+  const recentSearches = ['Roses', 'Tomato Seeds', 'Garden Soil']
 
   // Close account dropdown on outside click
   useEffect(() => {
@@ -47,6 +97,42 @@ export default function Header() {
         { to: '/account/register', label: 'Register', icon: User },
       ]
   const adminNav = isAdmin ? [{ to: '/admin', label: 'Admin Dashboard', icon: ShieldCheck }] : []
+
+  // Prepare dropdown menu items
+  const accountMenuItems = [
+    ...accountNav.map(item => ({
+      to: item.to,
+      label: item.label,
+      icon: item.icon
+    })),
+    ...adminNav.map(item => ({
+      to: item.to,
+      label: item.label,
+      icon: item.icon
+    })),
+    ...(isAuthed ? [
+      { divider: true },
+      { 
+        label: 'View Cart', 
+        icon: ShoppingCart, 
+        onClick: openDrawer,
+        badge: items?.length > 0 ? items.length : null
+      },
+      { 
+        label: 'Logout', 
+        icon: User, 
+        onClick: logout 
+      }
+    ] : [
+      { divider: true },
+      { 
+        label: 'View Cart', 
+        icon: ShoppingCart, 
+        onClick: openDrawer,
+        badge: items?.length > 0 ? items.length : null
+      }
+    ])
+  ]
 
   // Emoji map for categories for better quick recognition
   const categoryEmoji = {
@@ -83,7 +169,21 @@ export default function Header() {
   }, [])
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-neutral-200">
+    <motion.header 
+      ref={headerRef} 
+      className={`
+        sticky top-0 z-40 transition-all duration-300
+        ${isScrolled 
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-neutral-200' 
+          : 'bg-white/95 backdrop-blur border-b border-neutral-200'
+        }
+      `}
+      animate={{
+        y: isScrolled ? 0 : 0,
+        backgroundColor: isScrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.95)'
+      }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Top announcement bar */}
       <div className="bg-earth text-white text-xs sm:text-sm">
         <div className="mx-auto max-w-7xl px-4 py-1 flex items-center justify-center">
@@ -98,9 +198,13 @@ export default function Header() {
           <span className="font-display text-xl md:text-2xl font-semibold text-neutral-900">Chamunda Nursery</span>
         </Link>
         {/* Search */}
-        <div className="hidden md:block flex-1">
-          <label htmlFor="header-search" className="sr-only">Search products</label>
-          <input id="header-search" type="search" placeholder="Search plants, seeds, tools…" className="w-full rounded-md border border-neutral-300 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary shadow-soft" />
+        <div className="hidden md:block flex-1 max-w-md">
+          <SearchBar
+            placeholder="Search plants, seeds, tools…"
+            suggestions={searchSuggestions}
+            recentSearches={recentSearches}
+            size="md"
+          />
         </div>
         {/* Desktop nav */}
         <nav aria-label="Primary" className="ml-auto hidden md:flex items-center gap-2">
@@ -111,88 +215,78 @@ export default function Header() {
             </NavLink>
           ))}
           {/* Account dropdown */}
-          <div ref={accountRef} className="relative">
-            <button
-              className="flex items-center gap-2 px-3 py-2 rounded hover:bg-softGray/60 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              aria-haspopup="menu"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen((v) => !v)}
-            >
-              {isAdmin ? <ShieldCheck aria-hidden /> : <User aria-hidden />}
-              <span>{isAuthed ? (user?.name ? `Hi, ${user.name.split(' ')[0]}` : 'Account') : 'Account'}</span>
-              <ChevronDown className="text-neutral-600" aria-hidden />
-            </button>
-            <AnimatePresence>
-              {accountOpen && (
-                <motion.div
-                  role="menu"
-                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                  animate={reduceMotion ? {} : { opacity: 1, y: 0 }}
-                  exit={reduceMotion ? {} : { opacity: 0, y: 6 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="absolute right-0 mt-2 w-56 rounded-lg border border-neutral-200 bg-white shadow-premium"
-                >
-                  <div className="py-1">
-                    {accountNav.map(({ to, label }) => (
-                      <NavLink key={to} role="menuitem" className="block px-3 py-2 hover:bg-softGray/60" to={to} onClick={() => setAccountOpen(false)}>
-                        {label}
-                      </NavLink>
-                    ))}
-                    {adminNav.map(({ to, label }) => (
-                      <NavLink key={to} role="menuitem" className="block px-3 py-2 hover:bg-softGray/60" to={to} onClick={() => setAccountOpen(false)}>
-                        {label}
-                      </NavLink>
-                    ))}
-                    {isAuthed && (
-                      <button role="menuitem" className="w-full text-left px-3 py-2 hover:bg-softGray/60" onClick={() => { setAccountOpen(false); logout() }}>
-                        Logout
-                      </button>
-                    )}
-                    <button role="menuitem" className="w-full text-left px-3 py-2 hover:bg-softGray/60" onClick={openDrawer}>
-                      View Cart
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          {/* Cart button (lighter) */}
-          <button className="relative ml-2 rounded-md border border-neutral-300 px-3 py-2 hover:bg-neutral-100 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" onClick={openDrawer} aria-label="Open cart">
-            <ShoppingCart aria-hidden />
-            {items?.length > 0 && (
-              <span className="absolute -top-2 -right-2 text-xs bg-primary text-white rounded-full px-2 py-0.5">{items.length}</span>
-            )}
-          </button>
+          <DropdownMenu
+            trigger={
+              <>
+                {isAdmin ? <ShieldCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                <span>{isAuthed ? (user?.name ? `Hi, ${user.name.split(' ')[0]}` : 'Account') : 'Account'}</span>
+              </>
+            }
+            items={accountMenuItems}
+            align="right"
+            variant="minimal"
+            ariaLabel="Account menu"
+          />
+          {/* Cart button with animation */}
+          <CartIcon
+            itemCount={items?.length || 0}
+            onClick={openDrawer}
+            className="ml-2"
+          />
         </nav>
         {/* Mobile menu toggle */}
-        <button
-          className="md:hidden ml-auto inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-menu"
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        <HamburgerMenu
+          isOpen={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
-        >
-          {mobileOpen ? <X aria-hidden /> : <Menu aria-hidden />}
-          Menu
-        </button>
+          size="md"
+          variant="primary"
+          className="md:hidden ml-auto"
+          ariaLabel={mobileOpen ? 'Close menu' : 'Open menu'}
+        />
       </div>
 
-      {/* Category navbar (restored) */}
+      {/* Category navbar with enhanced dropdown */}
       <div className="hidden md:block border-t border-neutral-200">
-        <nav aria-label="Categories" className="page-container py-2 overflow-x-auto">
-          <ul className="flex items-center gap-4 text-sm">
-            {['Indoor','Outdoor','Bonsai','Fruits','Vegetables','Seeds','Tools','Pots'].map((label) => (
-              <li key={label}>
+        <nav aria-label="Categories" className="page-container py-2">
+          <div className="flex items-center gap-4">
+            {/* Categories dropdown */}
+            <DropdownMenu
+              trigger={
+                <>
+                  <Grid3X3 className="w-4 h-4" />
+                  <span>Categories</span>
+                </>
+              }
+              items={categories.map(category => ({
+                label: category.name,
+                href: `/catalog?category=${category.id}`,
+                icon: (
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-primary text-sm font-medium">
+                      {category.name.charAt(0)}
+                    </span>
+                  </div>
+                ),
+                description: `${category.count} items`
+              }))}
+              align="left"
+              variant="grid"
+              ariaLabel="Categories menu"
+            />
+            {/* Quick category links */}
+            <div className="flex items-center gap-4 text-sm overflow-x-auto">
+              {['Indoor','Outdoor','Bonsai','Fruits','Vegetables','Seeds','Tools','Pots'].map((label) => (
                 <NavLink
+                  key={label}
                   to={`/catalog?category=${label.toLowerCase()}`}
-                  className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-neutral-700 hover:bg-softGray/60"
+                  className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-neutral-700 hover:bg-softGray/60 whitespace-nowrap"
                 >
                   <Sprout className="h-4 w-4 text-neutral-600" aria-hidden />
                   <span>{label} {categoryEmoji[label.toLowerCase()] || ''}</span>
                 </NavLink>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          </div>
         </nav>
       </div>
 
@@ -285,20 +379,33 @@ export default function Header() {
                     </button>
                   </div>
                 </div>
-                {/* Categories grid (card style) */}
+                {/* Enhanced categories grid with animations */}
                 <div className="px-2 pb-4">
-                  <div className="text-xs uppercase tracking-wide text-neutral-600 px-3 mb-2">Categories</div>
+                  <div className="text-xs uppercase tracking-wide text-neutral-600 px-3 mb-3">Categories</div>
                   <div className="grid grid-cols-2 gap-3">
-                    {['indoor','outdoor','bonsai','fruits','vegetables','tools','seeds','pots'].map((c) => (
-                      <NavLink
-                        key={c}
-                        className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white p-4 shadow-soft hover:shadow-premium min-h-[64px]"
-                        to={`/catalog?category=${c}`}
-                        onClick={() => setMobileOpen(false)}
+                    {categories.slice(0, 8).map((category, index) => (
+                      <motion.div
+                        key={category.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05, duration: 0.3 }}
                       >
-                        <Grid3X3 className="h-5 w-5 text-neutral-700" aria-hidden />
-                        <span className="text-base font-medium">{c[0].toUpperCase()+c.slice(1)} {categoryEmoji[c] || ''}</span>
-                      </NavLink>
+                        <NavLink
+                          className="flex flex-col items-center gap-2 rounded-lg border border-neutral-200 bg-white p-4 shadow-soft hover:shadow-premium transition-all duration-200 hover:scale-105 min-h-[80px]"
+                          to={`/catalog?category=${category.id}`}
+                          onClick={() => setMobileOpen(false)}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-primary text-sm font-medium">
+                              {category.name.charAt(0)}
+                            </span>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-sm font-medium">{category.name}</div>
+                            <div className="text-xs text-neutral-600">{category.count} items</div>
+                          </div>
+                        </NavLink>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -307,6 +414,6 @@ export default function Header() {
           </div>
         )}
       </AnimatePresence>
-    </header>
+    </motion.header>
   )
 }

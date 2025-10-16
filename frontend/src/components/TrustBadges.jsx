@@ -1,6 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { Leaf, Truck, BookOpenCheck, ShieldCheck } from 'lucide-react'
+import { useStaggerAnimation } from '../hooks/useScrollAnimation.js'
 
 const badges = [
   {
@@ -26,18 +27,24 @@ const badges = [
 ]
 
 export default function TrustBadges() {
+  // Animation hook for staggered trust badges
+  const badgesAnimation = useStaggerAnimation()
+
   return (
     <section aria-labelledby="trust-heading" className="py-6 md:py-10">
       <div className="page-container">
         <h2 id="trust-heading" className="sr-only">Our Trust Badges</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <motion.div 
+          ref={badgesAnimation.ref}
+          variants={badgesAnimation.containerVariants}
+          initial="hidden"
+          animate={badgesAnimation.inView ? "visible" : "hidden"}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+        >
           {badges.map((b, i) => (
             <motion.div
               key={b.title}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.35, delay: i * 0.05, ease: 'easeOut' }}
+              variants={badgesAnimation.itemVariants}
               className="surface p-4 rounded-xl flex items-start gap-3"
             >
               <div className="h-10 w-10 rounded-full bg-pastel-green/30 text-primary flex items-center justify-center">{b.icon}</div>
@@ -47,7 +54,7 @@ export default function TrustBadges() {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

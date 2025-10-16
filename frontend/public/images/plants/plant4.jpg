@@ -1,0 +1,29 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="400" height="300" fill="url(#bg4)"/>
+  
+  <!-- Pot -->
+  <ellipse cx="200" cy="250" rx="60" ry="20" fill="#8b4513"/>
+  <rect x="140" y="230" width="120" height="40" fill="#a0522d" rx="5"/>
+  
+  <!-- Fern fronds -->
+  <path d="M200 220 Q180 200 160 180 Q170 185 180 190 Q190 195 200 200" fill="#22c55e"/>
+  <path d="M200 220 Q220 200 240 180 Q230 185 220 190 Q210 195 200 200" fill="#22c55e"/>
+  <path d="M200 210 Q175 190 150 170 Q160 175 175 180 Q190 185 200 190" fill="#16a34a"/>
+  <path d="M200 210 Q225 190 250 170 Q240 175 225 180 Q210 185 200 190" fill="#16a34a"/>
+  <path d="M200 200 Q170 180 140 160 Q155 165 170 170 Q185 175 200 180" fill="#15803d"/>
+  <path d="M200 200 Q230 180 260 160 Q245 165 230 170 Q215 175 200 180" fill="#15803d"/>
+  
+  <!-- Main stem -->
+  <rect x="195" y="180" width="10" height="50" fill="#228b22"/>
+  
+  <!-- Title -->
+  <text x="200" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="white">Fern Plant</text>
+  <text x="200" y="65" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="white">Lush Green Foliage</text>
+</svg>

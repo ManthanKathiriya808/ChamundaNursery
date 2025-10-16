@@ -66,7 +66,7 @@ export default function VideoHero({
                 <Swiper
                   modules={[Autoplay, Pagination, A11y, EffectFade]}
                   effect="fade"
-                  loop
+                  loop={sliderMessages.length > 1}
                   autoplay={{ delay: 2500, disableOnInteraction: false }}
                   pagination={{ clickable: true }}
                   a11y={{ enabled: true }}

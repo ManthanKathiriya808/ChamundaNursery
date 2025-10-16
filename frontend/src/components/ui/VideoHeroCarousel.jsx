@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import ScrollReveal from '../animations/ScrollReveal'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -54,19 +54,56 @@ const defaultSlides = [
 
 export default function VideoHeroCarousel({ slides = defaultSlides, delay = 3000, className = '' }) {
   const reduceMotion = useReducedMotion()
+  const [heroHeight, setHeroHeight] = useState('100vh')
+
+  // Calculate dynamic height based on viewport and header
+  useEffect(() => {
+    const calculateHeight = () => {
+      const viewportHeight = window.innerHeight
+      
+      // Try to get actual header height from DOM
+      const announcementBar = document.querySelector('[class*="top-0"][class*="bg-green-600"]')
+      const mainHeader = document.querySelector('header[class*="top-8"]')
+      
+      let headerHeight = 120 // fallback height
+      
+      if (announcementBar && mainHeader) {
+        const announcementHeight = announcementBar.offsetHeight
+        const mainHeaderHeight = mainHeader.offsetHeight
+        headerHeight = announcementHeight + mainHeaderHeight
+      }
+      
+      // Ensure minimum height and maximum utilization of viewport
+      const calculatedHeight = Math.max(400, viewportHeight - headerHeight)
+      setHeroHeight(`${calculatedHeight}px`)
+    }
+
+    // Calculate on mount and resize
+    calculateHeight()
+    window.addEventListener('resize', calculateHeight)
+    
+    // Recalculate after a short delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(calculateHeight, 100)
+    
+    return () => {
+      window.removeEventListener('resize', calculateHeight)
+      clearTimeout(timeoutId)
+    }
+  }, [])
 
   return (
     <section className={`relative ${className}`} aria-label="Featured videos and images">
-      {/* Full-bleed container */}
+      {/* Full-bleed container with dynamic height calculation */}
       <div className="relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-hidden bg-neutral-900">
         <Swiper
           modules={[Autoplay, Pagination, A11y, EffectFade]}
           effect="fade"
-          loop
+          loop={slides.length > 1}
           autoplay={{ delay, disableOnInteraction: false }}
           pagination={{ clickable: true }}
           a11y={{ enabled: true }}
-          className="w-full h-[calc(100dvh-var(--header-h))]"
+          className="w-full"
+          style={{ height: heroHeight }}
         >
           {slides.map((s, idx) => (
             <SwiperSlide key={s.id || idx} className="relative">
@@ -93,8 +130,8 @@ export default function VideoHeroCarousel({ slides = defaultSlides, delay = 3000
                 <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/35 to-black/20" aria-hidden />
               </div>
 
-              <div className="relative z-10 mx-auto max-w-7xl px-4 h-[calc(100dvh-var(--header-h))] flex items-center">
-                <ScrollReveal variant="fadeUp" className="max-w-2xl">
+              <div className="relative z-10 mx-auto max-w-7xl px-4 h-full flex items-center justify-center">
+                <ScrollReveal variant="fadeUp" className="max-w-2xl text-center">
                   <h1 className="font-display text-3xl md:text-5xl text-white drop-shadow-sm">{s.heading}</h1>
                   <p className="mt-4 text-neutral-200 md:text-lg">{s.subheading}</p>
                   {s.ctaText && (

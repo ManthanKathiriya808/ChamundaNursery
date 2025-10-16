@@ -18,7 +18,7 @@ export default function BannerSlider() {
       <Swiper
         modules={[Autoplay, Pagination, A11y, EffectFade]}
         effect="fade"
-        loop
+        loop={slides.length > 1}
         autoplay={{ delay: 4000, disableOnInteraction: false }}
         pagination={{ clickable: true }}
         a11y={{ enabled: true }}

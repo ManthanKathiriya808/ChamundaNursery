@@ -1,5 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { X, ShoppingBag, Minus, Plus, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../hooks/CartProvider.jsx'
 
@@ -40,40 +41,85 @@ export default function CartDrawer() {
             {/* Items */}
             <div className="flex-1 overflow-auto p-4">
               {items.length === 0 ? (
-                <div className="text-neutral-700">Your cart is empty.</div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  {/* Empty cart icon */}
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <ShoppingBag className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 mb-4">Your cart is empty</p>
+                  <Link
+                    to="/products"
+                    className="btn btn-primary"
+                    onClick={closeDrawer}
+                  >
+                    Start Shopping
+                  </Link>
+                </div>
               ) : (
-                <ul className="space-y-3">
-                  {items.map((i) => (
-                    <li key={i.id} className="rounded-lg border border-neutral-200 p-3 flex items-center gap-3">
-                      <img src={i.image || '/logo.png'} alt="Product" className="h-16 w-16 rounded bg-neutral-100 object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium line-clamp-1">{i.name}</div>
-                        <div className="text-sm text-neutral-600">₹{i.price}</div>
-                        <div className="mt-2 inline-flex items-center rounded-md border border-neutral-300 overflow-hidden">
-                          <button className="px-3 py-1 hover:bg-neutral-100" onClick={() => updateQty(i.id, i.qty - 1)} aria-label="Decrease">-</button>
-                          <span className="px-3 py-1 min-w-[32px] text-center">{i.qty}</span>
-                          <button className="px-3 py-1 hover:bg-neutral-100" onClick={() => updateQty(i.id, i.qty + 1)} aria-label="Increase">+</button>
+                <div className="space-y-4">
+                  {items.map((item) => (
+                    <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{item.name}</h4>
+                        <p className="text-primary font-semibold">₹{item.price}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            onClick={() => updateQty(item.id, item.qty - 1)}
+                            className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-sm font-medium">{item.qty}</span>
+                          <button
+                            onClick={() => updateQty(item.id, item.qty + 1)}
+                            className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => remove(item.id)}
+                            className="ml-auto text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="text-sm font-semibold">₹{i.price * i.qty}</div>
-                      <button className="btn btn-outline" onClick={() => remove(i.id)}>Remove</button>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
             {/* Footer */}
-            <div className="border-t border-neutral-200 p-4">
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between"><span>Subtotal</span><span>₹{subtotal}</span></div>
-                <div className="flex justify-between"><span>Shipping</span><span>₹{shipping}</span></div>
-                <div className="flex justify-between font-semibold"><span>Total</span><span>₹{total}</span></div>
+            {items.length > 0 && (
+              <div className="p-4 border-t border-neutral-200">
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Shipping</span>
+                    <span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Total</span>
+                    <span>₹{total}</span>
+                  </div>
+                </div>
+                <Link
+                  to="/checkout"
+                  className="btn btn-primary w-full"
+                  onClick={closeDrawer}
+                >
+                  Checkout
+                </Link>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <button className="btn btn-outline w-full" onClick={closeDrawer}>Continue Shopping</button>
-                <Link to="/checkout" className="btn btn-primary w-full" onClick={closeDrawer}>Checkout</Link>
-              </div>
-            </div>
+            )}
           </motion.aside>
         </div>
       )}

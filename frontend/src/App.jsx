@@ -1,23 +1,26 @@
-// Shared app layout: header, main outlet, footer
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Outlet } from 'react-router-dom'
-import Header from './components/Header.jsx'
-import Footer from './components/Footer.jsx'
-import CartDrawer from './components/CartDrawer.jsx'
+import EnhancedHeader from './components/EnhancedHeader'
+import Footer from './components/Footer'
+import CartDrawer from './components/CartDrawer'
+import PageTransition, { LayoutTransition } from './components/transitions/PageTransition'
+import { ClerkLoadingSpinner } from './providers/ClerkProvider'
 
-export default function App() {
+function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-cream text-neutral-900">
-      {/* Accessible site header with nav */}
-      <Header />
-      {/* Cart drawer portal */}
+    <LayoutTransition className="min-h-screen flex flex-col overflow-x-hidden">
+      <EnhancedHeader />
       <CartDrawer />
-      {/* Main content area with responsive padding */}
-      <main role="main" className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
+      <main className="flex-grow overflow-x-hidden pt-[120px]"> {/* Add padding-top for fixed header */}
+        <Suspense fallback={<ClerkLoadingSpinner />}>
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
+        </Suspense>
       </main>
-      {/* Footer with quick links */}
       <Footer />
-    </div>
+    </LayoutTransition>
   )
 }
+
+export default App

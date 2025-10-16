@@ -24,7 +24,7 @@ export default function ScrollReveal({
 }) {
   const reduceMotion = useReducedMotion()
   const variants = variantsMap[variant] || variantsMap.fadeUp
-  const MotionTag = motion(Tag)
+  const MotionTag = motion[Tag] || motion.div
 
   const motionProps = reduceMotion
     ? { initial: false, whileInView: undefined, animate: undefined }

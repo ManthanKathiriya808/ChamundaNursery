@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useStaggerAnimation } from '../hooks/useScrollAnimation.js'
 
 const posts = [
   { id: 'care-tips', title: '10 Plant Care Tips for Beginners', date: 'Sep 2024', image: 'https://images.unsplash.com/photo-1470167290877-7d5d2d0a3d95?q=80&w=1200&auto=format&fit=crop' },
@@ -9,6 +10,9 @@ const posts = [
 ]
 
 export default function BlogPreview() {
+  // Animation hook for staggered blog posts
+  const blogAnimation = useStaggerAnimation()
+
   return (
     <section aria-labelledby="blog-heading" className="py-6 md:py-10">
       <div className="page-container">
@@ -16,14 +20,17 @@ export default function BlogPreview() {
           <h2 id="blog-heading" className="heading-section">From Our Blog</h2>
           <Link to="/blog" className="btn btn-link">View all</Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <motion.div 
+          ref={blogAnimation.ref}
+          variants={blogAnimation.containerVariants}
+          initial="hidden"
+          animate={blogAnimation.inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
+        >
           {posts.map((p, i) => (
             <Link key={p.id} to={`/blog/${p.id}`} className="group block">
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.4, delay: i * 0.04, ease: 'easeOut' }}
+                variants={blogAnimation.itemVariants}
                 className="surface rounded-xl overflow-hidden"
               >
                 <img src={p.image} alt={p.title} className="h-36 md:h-44 w-full object-cover transition-transform duration-500 ease-soft group-hover:scale-105" />
@@ -40,7 +47,7 @@ export default function BlogPreview() {
               </motion.div>
             </Link>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

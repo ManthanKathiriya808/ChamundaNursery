@@ -15,7 +15,7 @@ export default function RelatedCarousel({ items = [] }) {
         modules={[Pagination, A11y, Autoplay]}
         pagination={{ clickable: true }}
         a11y={{ enabled: true }}
-        loop
+        loop={items.length > 4}
         autoplay={{ delay: 3000, disableOnInteraction: false }}
         spaceBetween={12}
         breakpoints={{

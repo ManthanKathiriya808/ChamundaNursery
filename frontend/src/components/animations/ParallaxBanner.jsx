@@ -18,10 +18,9 @@ export default function ParallaxBanner({
 
   return (
     <section aria-label={ariaLabel} className={`relative ${className}`}>
-      {/* Full-bleed container */}
-      <div className={`relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] ${heightClass} overflow-hidden`}>
+      {/* Full-bleed container with relative positioning for scroll calculations */}
+      <div ref={ref} className={`relative w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] ${heightClass} overflow-hidden`}>
         <motion.div
-          ref={ref}
           style={{ y, backgroundImage: `url(${imageSrc})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
           className="absolute inset-0"
           aria-hidden

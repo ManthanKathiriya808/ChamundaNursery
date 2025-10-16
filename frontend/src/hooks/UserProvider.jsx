@@ -63,7 +63,15 @@ export default function UserProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
     })
-    if (!res.ok) throw new Error('Registration failed')
+    if (!res.ok) {
+      // Try to get the error message from the response
+      try {
+        const errorData = await res.json()
+        throw new Error(errorData.error?.message || 'Registration failed')
+      } catch (parseError) {
+        throw new Error('Registration failed')
+      }
+    }
     const { user: u, token } = await res.json()
     const next = { id: u.id, name: u.name, email: u.email, role: u.role, isAuthenticated: true }
     try {

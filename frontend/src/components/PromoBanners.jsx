@@ -1,19 +1,27 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { useScrollAnimation } from '../hooks/useScrollAnimation.js'
 
 export default function PromoBanners() {
+  // Animation hooks for different promo sections
+  const topBannersAnimation = useScrollAnimation()
+  const fullBannerAnimation = useScrollAnimation()
+
   return (
     <section aria-labelledby="promos-heading" className="py-6 md:py-10">
       <div className="page-container">
         <h2 id="promos-heading" className="sr-only">Promotional Banners</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <motion.div 
+          ref={topBannersAnimation.ref}
+          variants={topBannersAnimation.fadeUp}
+          initial="hidden"
+          animate={topBannersAnimation.inView ? "visible" : "hidden"}
+          className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4"
+        >
           <Link to="/catalog?category=indoor-plants" className="group block">
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
+              variants={topBannersAnimation.fadeLeft}
               className="rounded-xl overflow-hidden surface p-0"
             >
               <div className="relative">
@@ -29,10 +37,7 @@ export default function PromoBanners() {
 
           <Link to="/catalog?category=planters" className="group block">
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
+              variants={topBannersAnimation.fadeRight}
               className="rounded-xl overflow-hidden surface p-0"
             >
               <div className="relative">
@@ -45,14 +50,14 @@ export default function PromoBanners() {
               </div>
             </motion.div>
           </Link>
-        </div>
+        </motion.div>
 
         <Link to="/catalog?category=fruit-plants" className="group block mt-3 md:mt-4">
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
+            ref={fullBannerAnimation.ref}
+            variants={fullBannerAnimation.scaleUp}
+            initial="hidden"
+            animate={fullBannerAnimation.inView ? "visible" : "hidden"}
             className="rounded-xl overflow-hidden surface p-0"
           >
             <div className="relative">

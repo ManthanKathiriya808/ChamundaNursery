@@ -3,11 +3,47 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Leaf, Truck, ShieldCheck, Search, Sprout, Shovel } from 'lucide-react'
 import ImageLazy from './ImageLazy.jsx'
+import LottieAnimation from './animations/LottieAnimation.jsx'
+
+// Animation data for hero section
+const heroAnimations = {
+  floatingLeaves: "https://lottie.host/4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s/data.json",
+  wateringCan: "https://lottie.host/2l3m4n5o-6p7q-8r9s-0t1u-2v3w4x5y6z7a/data.json",
+  plantGrowing: "https://lottie.host/6p7q8r9s-0t1u-2v3w-4x5y-6z7a8b9c0d1e/data.json"
+}
+
+// Animation configurations
+const animationConfigs = {
+  hero: {
+    loop: true,
+    autoplay: true,
+    speed: 0.8,
+    style: { width: '100%', height: '100%' }
+  },
+  ui: {
+    loop: false,
+    autoplay: false,
+    speed: 1,
+    style: { width: '24px', height: '24px' }
+  }
+}
+
 
 export default function HeroSection() {
   return (
     <section aria-label="Hero" className="mb-10">
       <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-gradient-to-br from-primary via-accent to-primaryDark text-neutral-900">
+        {/* Floating leaves background animation */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none" aria-hidden="true">
+          <LottieAnimation
+            animationData={heroAnimations.floatingLeaves}
+            width="100%"
+            height="100%"
+            className="absolute inset-0"
+            {...animationConfigs.hero}
+          />
+        </div>
+        
         <div className="absolute inset-0 opacity-10" aria-hidden="true">
           <div className="h-full w-full bg-[radial-gradient(circle_at_20%_20%,white_0,transparent_35%),radial-gradient(circle_at_80%_30%,white_0,transparent_35%)]" />
         </div>
@@ -38,8 +74,15 @@ export default function HeroSection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Link to="/catalog" className="btn btn-primary">
-                Shop Plants
+              <Link to="/catalog" className="btn btn-primary flex items-center gap-2">
+                <span>Shop Plants</span>
+                {/* Watering can animation for CTA */}
+                <LottieAnimation
+                  animationData={heroAnimations.wateringCan}
+                  width={24}
+                  height={24}
+                  {...animationConfigs.ui}
+                />
               </Link>
               <Link to="/catalog?category=tools" className="btn btn-accent">
                 Explore Tools
@@ -74,7 +117,22 @@ export default function HeroSection() {
           {/* Right: image collage / promo card */}
           <div className="relative">
             <div className="surface surface-hover bg-white/90 p-4 md:p-6">
-              <ImageLazy src="/logo.svg" alt="Chamunda Nursery" className="w-full h-56 md:h-72 object-contain rounded-lg bg-neutral-100" />
+              {/* Main plant growing animation */}
+              <div className="relative w-full h-56 md:h-72 rounded-lg bg-gradient-to-br from-green-50 to-blue-50 overflow-hidden">
+                <LottieAnimation
+                  animationData={heroAnimations.plantGrowing}
+                  width="100%"
+                  height="100%"
+                  className="absolute inset-0"
+                  {...animationConfigs.hero}
+                />
+                {/* Fallback logo if animation fails to load */}
+                <ImageLazy 
+                  src="/logo.svg" 
+                  alt="Chamunda Nursery" 
+                  className="absolute inset-0 w-full h-full object-contain opacity-20" 
+                />
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {['Indoor Plants', 'Outdoor', 'Seeds', 'Tools'].map((c) => (
                   <Link key={c} to={`/catalog?category=${c.toLowerCase()}`} className="rounded-md bg-accentSoft text-primary px-3 py-2 text-sm font-medium hover:bg-accentLight inline-flex items-center gap-2 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
