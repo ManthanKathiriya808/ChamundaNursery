@@ -3,16 +3,22 @@
  * 
  * This hook bridges Clerk authentication with the custom JWT system
  * by generating JWT tokens when users sign in through Clerk and
- * storing them for API calls.
+ * storing them for API calls. Now uses the enhanced user sync functionality.
  */
 
 import { useAuth, useUser } from '@clerk/clerk-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { toast } from 'react-hot-toast'
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export const useClerkJWTBridge = () => {
   // Check if we're in demo mode by checking if Clerk is available
   const isDemoMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 
                      import.meta.env.VITE_CLERK_PUBLISHABLE_KEY === 'pk_test_your_publishable_key_here'
+
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [dbUser, setDbUser] = useState(null)
 
   let isSignedIn = false
   let user = null
@@ -33,6 +39,14 @@ export const useClerkJWTBridge = () => {
   }
 
   useEffect(() => {
+    console.log('Clerk JWT Bridge: useEffect triggered', { 
+      isDemoMode, 
+      isSignedIn, 
+      hasUser: !!user, 
+      isSyncing,
+      clerkUserId: user?.id 
+    })
+    
     const syncClerkUser = async () => {
       // Skip sync in demo mode
       if (isDemoMode) {
@@ -42,52 +56,75 @@ export const useClerkJWTBridge = () => {
 
       console.log('Clerk JWT Bridge: Sync triggered', { isSignedIn, hasUser: !!user })
 
-      if (isSignedIn && user && getToken) {
+      if (isSignedIn && user && !isSyncing) {
+        setIsSyncing(true)
+        
         try {
-          console.log('Clerk JWT Bridge: Getting Clerk token...')
-          // Get Clerk session token
-          const clerkToken = await getToken()
-          
           console.log('Clerk JWT Bridge: Syncing with backend...', {
             clerkUserId: user.id,
             email: user.primaryEmailAddress?.emailAddress,
-            name: user.fullName || user.firstName || 'User'
+            name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'User'
           })
           
-          // Sync with backend to get JWT token
-          const response = await fetch('http://localhost:4000/api/auth/clerk-sync', {
+          // Prepare user data for sync
+          const userData = {
+            clerkUserId: user.id,
+            email: user.primaryEmailAddress?.emailAddress || user.emailAddresses?.[0]?.emailAddress,
+            name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'User',
+            role: 'customer' // Default role
+          }
+
+          // Check if user has admin role in Clerk metadata
+          if (user.publicMetadata?.role === 'admin' || user.privateMetadata?.role === 'admin') {
+            userData.role = 'admin'
+          }
+          
+          // Sync with backend to get JWT token (using correct endpoint)
+          const response = await fetch(`${BASE_URL}/api/auth/clerk-sync`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${clerkToken}`
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-              clerkUserId: user.id,
-              email: user.primaryEmailAddress?.emailAddress,
-              name: user.fullName || user.firstName || 'User'
-            })
+            body: JSON.stringify(userData)
           })
 
           if (response.ok) {
-            const { token } = await response.json()
-            console.log('Clerk JWT Bridge: JWT token received, storing...')
-            // Store JWT token for API calls
-            localStorage.setItem('auth.token', token)
+            const result = await response.json()
+            console.log('Clerk JWT Bridge: User synced successfully', result.user)
+            
+            // Store JWT token and user data for API calls
+            localStorage.setItem('auth.token', result.token)
+            localStorage.setItem('auth.user', JSON.stringify(result.user))
+            setDbUser(result.user)
+            
+            // Show welcome message for new users
+            if (!localStorage.getItem('user_sync_completed')) {
+              toast.success(`Welcome ${result.user.name}! Your account has been set up. 🌱`)
+              localStorage.setItem('user_sync_completed', 'true')
+            }
           } else {
-            console.error('Clerk JWT Bridge: Failed to sync with backend', response.status, response.statusText)
+            const errorData = await response.json().catch(() => ({}))
+            console.error('Clerk JWT Bridge: Failed to sync with backend', response.status, errorData)
+            toast.error('Failed to sync user data. Please refresh the page.')
           }
         } catch (error) {
           console.error('Clerk JWT Bridge: Failed to sync Clerk user:', error)
+          toast.error('Failed to sync user data. Please refresh the page.')
+        } finally {
+          setIsSyncing(false)
         }
-      } else {
-        console.log('Clerk JWT Bridge: User signed out, clearing token')
-        // Clear token when signed out
+      } else if (!isSignedIn) {
+        console.log('Clerk JWT Bridge: User signed out, clearing data')
+        // Clear data when signed out
         localStorage.removeItem('auth.token')
+        localStorage.removeItem('auth.user')
+        localStorage.removeItem('user_sync_completed')
+        setDbUser(null)
       }
     }
 
     syncClerkUser()
-  }, [isSignedIn, user, getToken, isDemoMode])
+  }, [isSignedIn, user, isDemoMode])
 
-  return { isSignedIn, user }
+  return { isSignedIn, user, dbUser, isSyncing }
 }

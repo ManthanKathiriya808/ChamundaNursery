@@ -1,16 +1,110 @@
-// Enhanced Cart page with improved UX
 import React from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, ArrowLeft, Trash2, Plus, Minus, ShoppingBag, Leaf } from 'lucide-react'
-import { useCart } from '../hooks/CartProvider.jsx'
+import { motion } from 'framer-motion'
+import useCartStore from '../stores/cartStore'
+import useAuthStore from '../stores/authStore'
+import useUIStore from '../stores/uiStore'
+import CartItem from '../components/CartItem'
+import CartSummary from '../components/CartSummary'
+import EmptyCart from '../components/EmptyCart'
+import LoadingSpinner from '../components/LoadingSpinner'
 
-export default function Cart() {
-  const { items, updateQty, remove, subtotal } = useCart()
+const Cart = () => {
+  const navigate = useNavigate()
   
-  const shipping = subtotal > 499 ? 0 : 99
-  const total = subtotal + shipping
+  // Zustand stores
+  const { 
+    items, 
+    total, 
+    itemCount, 
+    updateQuantity, 
+    removeItem, 
+    clearCart,
+    isLoading 
+  } = useCartStore()
+  
+  const { isAuthenticated } = useAuthStore()
+  const { showSuccess, showConfirm } = useUIStore()
+  
+  // Handlers
+  const handleQuantityChange = (id, quantity) => {
+    if (quantity <= 0) {
+      handleRemoveItem(id)
+    } else {
+      updateQuantity(id, quantity)
+    }
+  }
+  
+  const handleRemoveItem = (id) => {
+    const item = items.find(item => item.id === id)
+    if (item) {
+      showConfirm(
+        `Remove ${item.name} from cart?`,
+        'This action cannot be undone.',
+        () => {
+          removeItem(id)
+          showSuccess('Item removed from cart')
+        }
+      )
+    }
+  }
+  
+  const handleClearCart = () => {
+    showConfirm(
+      'Clear entire cart?',
+      'This will remove all items from your cart.',
+      () => {
+        clearCart()
+        showSuccess('Cart cleared')
+      }
+    )
+  }
+  
+  const handleCheckout = () => {
+    if (!isAuthenticated) {
+      showConfirm(
+        'Sign in required',
+        'Please sign in to continue with checkout.',
+        () => navigate('/account/login?redirect=/checkout')
+      )
+      return
+    }
+    
+    navigate('/checkout')
+  }
+  
+  const handleContinueShopping = () => {
+    navigate('/catalog')
+  }
+  
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+  
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0 }
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
+  
+  if (items.length === 0) {
+    return <EmptyCart onContinueShopping={handleContinueShopping} />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden">
@@ -28,7 +122,7 @@ export default function Cart() {
           transition={{ duration: 0.6 }}
         >
           <Link
-            to="/products"
+            to="/catalog"
             className="inline-flex items-center gap-2 text-primary hover:text-primary-dark transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -92,14 +186,14 @@ export default function Cart() {
                       
                       <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
                         <Link
-                          to="/products"
+                          to="/catalog"
                           className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-dark text-white font-semibold rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                         >
                           <Leaf className="w-5 h-5" />
                           Browse Plants
                         </Link>
                         <Link
-                          to="/categories"
+                          to="/catalog"
                           className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-primary text-primary font-semibold rounded-xl hover:bg-primary hover:text-white transition-all duration-300"
                         >
                           <ShoppingBag className="w-5 h-5" />
@@ -310,7 +404,7 @@ export default function Cart() {
                   
                   <div className="text-center">
                     <Link
-                      to="/products"
+                      to="/catalog"
                       className="text-primary hover:text-primary-dark text-sm font-medium transition-colors"
                     >
                       ← Continue Shopping
@@ -325,3 +419,5 @@ export default function Cart() {
     </div>
   )
 }
+
+export default Cart

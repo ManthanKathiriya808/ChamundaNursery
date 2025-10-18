@@ -48,7 +48,7 @@ export default function CartDrawer() {
                   </div>
                   <p className="text-gray-600 mb-4">Your cart is empty</p>
                   <Link
-                    to="/products"
+                    to="/catalog"
                     className="btn btn-primary"
                     onClick={closeDrawer}
                   >

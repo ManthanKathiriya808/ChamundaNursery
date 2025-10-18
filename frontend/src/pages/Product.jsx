@@ -223,13 +223,21 @@ export default function Product() {
                     className="btn btn-primary w-full"
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      if (!item) return
+                      console.log('Add to cart clicked', { item, user, cart, toast })
+                      if (!item) {
+                        console.log('No item found')
+                        return
+                      }
                       if (!user?.isAuthenticated) {
+                        console.log('User not authenticated, redirecting to login')
                         navigate('/account/login', { state: { from: location } })
                         return
                       }
+                      console.log('Adding to cart:', { id: item.id || id, name: item.name, price: item.price, image: item.image }, qty)
                       cart.add({ id: item.id || id, name: item.name, price: item.price, image: item.image }, qty)
+                      console.log('Showing toast')
                       toast.push('success', 'Added to cart')
+                      console.log('Opening drawer')
                       cart.openDrawer()
                     }}
                   >

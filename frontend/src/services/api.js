@@ -209,6 +209,30 @@ export async function uploadProductsBulk(file) {
   }
 }
 
+// --- Admin Dashboard API ---
+export async function fetchDashboardStats() {
+  try {
+    const res = await request('/api/admin/analytics/dashboard')
+    if (!res.ok) throw new Error(`Failed to fetch dashboard stats: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Dashboard API unavailable, using mock data', e)
+    // Fallback to mock data
+    return {
+      summary: {
+        totalSales: 0,
+        orders: 0,
+        avgOrderValue: 0,
+        users: 0,
+        products: 0,
+        reviews: 0,
+        period: 'all_time'
+      },
+      recentOrders: []
+    }
+  }
+}
+
 // --- Auth-aware endpoints ---
 export async function fetchUser() {
   // Frontend stores user in localStorage after login; return it for quick access
@@ -247,4 +271,146 @@ export async function deleteProduct(productId) {
   const res = await request(`/api/admin/products/${productId}`, { method: 'DELETE' })
   if (!res.ok && res.status !== 204) throw new Error(`Failed to delete product: ${res.status}`)
   return { ok: true }
+}
+
+// --- Cart API endpoints ---
+export async function fetchCartItems() {
+  try {
+    const res = await request('/api/cart')
+    if (!res.ok) throw new Error(`Failed to fetch cart items: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem('cart.items')
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  }
+}
+
+export async function addToCart(productId, quantity = 1) {
+  try {
+    const res = await request('/api/cart/add', {
+      method: 'POST',
+      body: JSON.stringify({ productId, quantity })
+    })
+    if (!res.ok) throw new Error(`Failed to add to cart: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage - get product details first
+    try {
+      const product = await fetchProductById(productId)
+      const raw = localStorage.getItem('cart.items')
+      const items = raw ? JSON.parse(raw) : []
+      
+      const existingIndex = items.findIndex(item => String(item.id) === String(productId))
+      if (existingIndex >= 0) {
+        items[existingIndex].qty += quantity
+      } else {
+        items.push({
+          id: product.id,
+          name: product.name,
+          price: Number(product.price) || 0,
+          image: product.image,
+          qty: quantity
+        })
+      }
+      
+      localStorage.setItem('cart.items', JSON.stringify(items))
+      return { success: true, item: items[existingIndex >= 0 ? existingIndex : items.length - 1] }
+    } catch {
+      throw new Error('Failed to add to cart')
+    }
+  }
+}
+
+export async function updateCartItem(itemId, quantity) {
+  try {
+    const res = await request(`/api/cart/update/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity })
+    })
+    if (!res.ok) throw new Error(`Failed to update cart item: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem('cart.items')
+      const items = raw ? JSON.parse(raw) : []
+      const updatedItems = items.map(item => 
+        String(item.id) === String(itemId) 
+          ? { ...item, qty: Math.max(1, quantity) }
+          : item
+      )
+      localStorage.setItem('cart.items', JSON.stringify(updatedItems))
+      return { success: true }
+    } catch {
+      throw new Error('Failed to update cart item')
+    }
+  }
+}
+
+export async function removeFromCart(itemId) {
+  try {
+    const res = await request(`/api/cart/remove/${itemId}`, {
+      method: 'DELETE'
+    })
+    if (!res.ok) throw new Error(`Failed to remove from cart: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem('cart.items')
+      const items = raw ? JSON.parse(raw) : []
+      const filteredItems = items.filter(item => String(item.id) !== String(itemId))
+      localStorage.setItem('cart.items', JSON.stringify(filteredItems))
+      return { success: true }
+    } catch {
+      throw new Error('Failed to remove from cart')
+    }
+  }
+}
+
+export async function clearCart() {
+  try {
+    const res = await request('/api/cart/clear', {
+      method: 'DELETE'
+    })
+    if (!res.ok) throw new Error(`Failed to clear cart: ${res.status}`)
+    return res.json()
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage
+    try {
+      localStorage.setItem('cart.items', JSON.stringify([]))
+      return { success: true }
+    } catch {
+      throw new Error('Failed to clear cart')
+    }
+  }
+}
+
+export async function getCartCount() {
+  try {
+    const res = await request('/api/cart/count')
+    if (!res.ok) throw new Error(`Failed to get cart count: ${res.status}`)
+    const data = await res.json()
+    return data.count || 0
+  } catch (e) {
+    console.warn('Cart API unavailable, using localStorage fallback', e)
+    // Fallback to localStorage
+    try {
+      const raw = localStorage.getItem('cart.items')
+      const items = raw ? JSON.parse(raw) : []
+      return items.reduce((sum, item) => sum + (item.qty || 1), 0)
+    } catch {
+      return 0
+    }
+  }
 }

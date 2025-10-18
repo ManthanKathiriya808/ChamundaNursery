@@ -1,16 +1,17 @@
 // Header with responsive navigation and multi-level category dropdowns
 import React, { useState, useRef, useEffect } from 'react'
 import ImageLazy from './ImageLazy.jsx'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Menu, X, Home, Grid3X3, FileText, User, ShoppingCart, ShieldCheck, Phone, HelpCircle, ChevronDown, Heart, Sprout } from 'lucide-react'
+import { Menu, X, Home, Grid3X3, FileText, User, ShoppingCart, ShieldCheck, Phone, HelpCircle, ChevronDown, Heart, Sprout, Settings } from 'lucide-react'
 import { useCart } from '../hooks/CartProvider.jsx'
-import useUser from '../hooks/useUser.js'
+import { useUser, useAuth, useUserDisplayName } from '../hooks/useAuth.js'
 import { useData } from '../context/DataProvider.jsx'
 import HamburgerMenu from './animations/HamburgerMenu.jsx'
 import DropdownMenu from './ui/DropdownMenu.jsx'
 import CartIcon from './animations/CartIcon.jsx'
 import SearchBar from './ui/SearchBar.jsx'
+import { AvatarButton } from './ui/Avatar.jsx'
 
 export default function Header() {
   // Modern ecommerce header with top announcement, main bar, and category nav
@@ -18,11 +19,19 @@ export default function Header() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const { openDrawer, items } = useCart()
-  const { user, logout } = useUser()
+  const { user, isLoaded } = useUser()
+  const { isSignedIn, signOut } = useAuth()
+  const displayName = useUserDisplayName()
   const { products } = useData()
   const reduceMotion = useReducedMotion()
   const accountRef = useRef(null)
   const headerRef = useRef(null)
+  const navigate = useNavigate()
+
+  // Handle cart button click - navigate to cart page
+  const handleCartClick = () => {
+    navigate('/cart')
+  }
 
   // Generate categories from products
   const categories = React.useMemo(() => {
@@ -82,11 +91,23 @@ export default function Header() {
   const primaryNav = [
     { to: '/', label: 'Home', icon: Home },
     { to: '/catalog', label: 'Catalog', icon: Grid3X3 },
-    { to: '/blog', label: 'Blog', icon: FileText },
-    { to: '/care', label: 'Care', icon: Heart },
+    { to: '/about', label: 'About', icon: FileText },
+    { to: '/contact', label: 'Contact Us', icon: Phone },
   ]
-  const isAuthed = !!user?.isAuthenticated
-  const isAdmin = isAuthed && (user.role === 'admin' || user.isAdmin === true)
+
+  // More dropdown menu items
+  const moreMenuItems = [
+    { to: '/blog', label: 'Blog', icon: FileText },
+    { to: '/care', label: 'Plant Care Guide', icon: Heart },
+    { divider: true },
+    { to: '/legal', label: 'Legal Information', icon: ShieldCheck },
+    { to: '/privacy', label: 'Privacy Policy', icon: ShieldCheck },
+    { to: '/terms', label: 'Terms of Service', icon: ShieldCheck },
+    { divider: true },
+    { to: '/faq', label: 'FAQ', icon: HelpCircle },
+  ]
+  const isAuthed = isSignedIn && user
+  const isAdmin = isAuthed && user?.publicMetadata?.role === 'admin'
   const accountNav = isAuthed
     ? [
         { to: '/account/profile', label: 'Profile', icon: User },
@@ -121,7 +142,7 @@ export default function Header() {
       { 
         label: 'Logout', 
         icon: User, 
-        onClick: logout 
+        onClick: signOut 
       }
     ] : [
       { divider: true },
@@ -214,23 +235,63 @@ export default function Header() {
               <span>{label}</span>
             </NavLink>
           ))}
+          
+          {/* More dropdown */}
+          <DropdownMenu
+            trigger={
+              <div className="flex items-center gap-2">
+                <HelpCircle className="w-4 h-4" />
+                <span>More</span>
+        
+              </div>
+            }
+            items={moreMenuItems}
+            align="right"
+            variant="minimal"
+            ariaLabel="More menu"
+          />
+
           {/* Account dropdown */}
           <DropdownMenu
             trigger={
-              <>
-                {isAdmin ? <ShieldCheck className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                <span>{isAuthed ? (user?.name ? `Hi, ${user.name.split(' ')[0]}` : 'Account') : 'Account'}</span>
-              </>
+              <div className="flex items-center gap-2">
+                {isAuthed ? (
+                  <>
+                    <AvatarButton user={user} size="sm" />
+                    <span className="hidden lg:inline text-sm font-medium text-neutral-700">
+                      Hi, {displayName.split(' ')[0]}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4 h-4" />
+                    <span>Account</span>
+                  </>
+                )}
+              </div>
             }
             items={accountMenuItems}
             align="right"
             variant="minimal"
             ariaLabel="Account menu"
           />
+
+          {/* Admin icon - only visible to admins */}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="px-3 py-2 rounded hover:bg-softGray/60 link-hover inline-flex items-center gap-2 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              title="Admin Dashboard"
+            >
+              <Settings className="h-4 w-4 text-neutral-600" aria-hidden />
+              <span className="hidden lg:inline">Admin</span>
+            </Link>
+          )}
+
           {/* Cart button with animation */}
           <CartIcon
             itemCount={items?.length || 0}
-            onClick={openDrawer}
+            onClick={handleCartClick}
             className="ml-2"
           />
         </nav>
@@ -337,6 +398,25 @@ export default function Header() {
                       <span className="text-base font-medium">{label}</span>
                     </NavLink>
                   ))}
+                  
+                  {/* More menu items */}
+                  <div className="mt-2 border-t border-neutral-200 pt-2">
+                    <div className="px-4 py-2">
+                      <span className="text-sm font-medium text-neutral-500 uppercase tracking-wide">More</span>
+                    </div>
+                    {moreMenuItems.filter(item => !item.divider).map(({ to, label, icon: Icon }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-md hover:bg-softGray/60 min-h-[48px]"
+                      >
+                        <Icon className="h-5 w-5 text-neutral-700" aria-hidden />
+                        <span className="text-base">{label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                  
                   {/* Account & Admin quick nav */}
                   <div className="mt-2 border-t border-neutral-200 pt-2">
                     {accountNav.map(({ to, label }) => (
@@ -363,7 +443,7 @@ export default function Header() {
                     ))}
                     {isAuthed && (
                       <button
-                        onClick={() => { setMobileOpen(false); logout() }}
+                        onClick={() => { setMobileOpen(false); signOut() }}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-softGray/60 min-h-[44px]"
                       >
                         <User aria-hidden />

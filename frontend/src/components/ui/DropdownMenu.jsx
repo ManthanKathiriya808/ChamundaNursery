@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 /**
- * Enhanced Dropdown Menu Component
- * Features smooth animations, keyboard navigation, and accessibility
+ * DropdownMenu Component - Rebuilt from scratch for reliable navigation
  * 
- * @param {React.ReactNode} trigger - The trigger element (button content)
- * @param {Array} items - Array of menu items with { to?, href?, label, icon?, onClick?, divider? }
- * @param {string} align - Alignment: 'left', 'right', 'center'
- * @param {string} className - Additional CSS classes for the trigger
- * @param {boolean} disabled - Whether the dropdown is disabled
- * @param {string} variant - Style variant: 'default', 'minimal', 'ghost'
+ * Features:
+ * - Smooth animations with Framer Motion
+ * - Keyboard navigation support
+ * - Reliable navigation for login/register/cart
+ * - Outside click detection
+ * - Customizable styling and positioning
  */
 const DropdownMenu = ({
   trigger,
@@ -28,8 +27,9 @@ const DropdownMenu = ({
   const dropdownRef = useRef(null)
   const triggerRef = useRef(null)
   const itemRefs = useRef([])
+  const navigate = useNavigate()
 
-  // Close dropdown on outside click
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -38,15 +38,24 @@ const DropdownMenu = ({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+    }
 
-  // Handle keyboard navigation
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [isOpen])
+
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (!isOpen) return
 
+      const validItems = items.filter(item => !item.divider)
+      
       switch (event.key) {
         case 'Escape':
           setIsOpen(false)
@@ -56,31 +65,37 @@ const DropdownMenu = ({
         case 'ArrowDown':
           event.preventDefault()
           setFocusedIndex(prev => 
-            prev < items.length - 1 ? prev + 1 : 0
+            prev < validItems.length - 1 ? prev + 1 : 0
           )
           break
         case 'ArrowUp':
           event.preventDefault()
           setFocusedIndex(prev => 
-            prev > 0 ? prev - 1 : items.length - 1
+            prev > 0 ? prev - 1 : validItems.length - 1
           )
           break
         case 'Enter':
         case ' ':
+          event.preventDefault()
           if (focusedIndex >= 0) {
-            event.preventDefault()
-            const item = items[focusedIndex]
-            if (item.onClick) {
-              item.onClick()
-              setIsOpen(false)
-            }
+            const item = validItems[focusedIndex]
+            handleItemClick(item, focusedIndex)
           }
+          break
+        case 'Tab':
+          setIsOpen(false)
+          setFocusedIndex(-1)
           break
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isOpen, focusedIndex, items])
 
   // Focus management
@@ -90,18 +105,63 @@ const DropdownMenu = ({
     }
   }, [focusedIndex])
 
-  const alignmentClasses = {
-    left: 'left-0',
-    right: 'right-0',
-    center: 'left-1/2 transform -translate-x-1/2'
+  // Handle item clicks with reliable navigation
+  const handleItemClick = (item, index) => {
+    console.log('DropdownMenu: Item clicked:', item);
+    
+    if (item.divider) return;
+    
+    // Close dropdown first
+    setIsOpen(false);
+    setFocusedIndex(-1);
+    
+    // Handle navigation
+    if (item.to) {
+      console.log('DropdownMenu: Navigating to:', item.to);
+      // Use React Router navigate for internal routes
+      navigate(item.to);
+    } else if (item.href) {
+      console.log('DropdownMenu: External link:', item.href);
+      // External links
+      if (item.external) {
+        window.open(item.href, '_blank', 'noopener,noreferrer');
+      } else {
+        window.location.href = item.href;
+      }
+    } else if (item.onClick) {
+      console.log('DropdownMenu: Executing onClick handler');
+      // Custom onClick handler (for cart, logout, etc.)
+      item.onClick();
+    }
+    
+    // Reset focus after navigation
+    if (triggerRef.current) {
+      triggerRef.current.focus();
+    }
   }
 
+  // Handle trigger click
+  const handleTriggerClick = () => {
+    if (!disabled) {
+      setIsOpen(!isOpen)
+      setFocusedIndex(-1)
+    }
+  }
+
+  // Styling variants
   const variantClasses = {
     default: 'px-3 py-2 rounded-lg hover:bg-neutral-50 border border-neutral-200',
     minimal: 'px-3 py-2 rounded-lg hover:bg-neutral-50',
     ghost: 'px-3 py-2 rounded-lg hover:bg-neutral-100/50'
   }
 
+  const alignmentClasses = {
+    left: 'left-0',
+    right: 'right-0',
+    center: 'left-1/2 transform -translate-x-1/2'
+  }
+
+  // Animation variants
   const dropdownVariants = {
     hidden: {
       opacity: 0,
@@ -136,21 +196,6 @@ const DropdownMenu = ({
     })
   }
 
-  const handleTriggerClick = () => {
-    if (!disabled) {
-      setIsOpen(!isOpen)
-      setFocusedIndex(-1)
-    }
-  }
-
-  const handleItemClick = (item, index) => {
-    if (item.onClick) {
-      item.onClick()
-    }
-    setIsOpen(false)
-    setFocusedIndex(-1)
-  }
-
   return (
     <div ref={dropdownRef} className="relative">
       {/* Trigger Button */}
@@ -158,24 +203,23 @@ const DropdownMenu = ({
         ref={triggerRef}
         className={`
           inline-flex items-center gap-2 transition-all duration-200
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
           ${variantClasses[variant]}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+          ${isOpen ? 'bg-neutral-50' : ''}
           ${className}
         `}
         onClick={handleTriggerClick}
         disabled={disabled}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
         aria-label={ariaLabel}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
       >
         {trigger}
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <ChevronDown className="w-4 h-4 text-neutral-600" />
-        </motion.div>
+        <ChevronDown 
+          className={`w-4 h-4 transition-transform duration-200 ${
+            isOpen ? 'rotate-180' : ''
+          }`} 
+        />
       </button>
 
       {/* Dropdown Menu */}
@@ -187,15 +231,16 @@ const DropdownMenu = ({
             animate="visible"
             exit="hidden"
             className={`
-              absolute z-50 mt-2 min-w-[200px] max-w-[300px]
-              bg-white border border-neutral-200 rounded-xl shadow-xl
-              backdrop-blur-sm bg-white/95
-              ${alignmentClasses[align]}
+              absolute top-full mt-2 min-w-[200px] z-50
+              bg-white rounded-lg shadow-lg border border-neutral-200
+              py-2 ${alignmentClasses[align]}
             `}
             role="menu"
+            aria-orientation="vertical"
           >
-            <div className="py-2">
+            <div className="max-h-96 overflow-y-auto">
               {items.map((item, index) => {
+                // Render divider
                 if (item.divider) {
                   return (
                     <motion.div
@@ -207,22 +252,14 @@ const DropdownMenu = ({
                   )
                 }
 
-                const ItemComponent = item.to ? Link : item.href ? 'a' : 'button'
-                const itemProps = item.to 
-                  ? { to: item.to }
-                  : item.href 
-                  ? { href: item.href, target: item.external ? '_blank' : undefined }
-                  : { type: 'button' }
-
                 return (
                   <motion.div
                     key={item.label || index}
                     variants={itemVariants}
                     custom={index}
                   >
-                    <ItemComponent
+                    <button
                       ref={el => itemRefs.current[index] = el}
-                      {...itemProps}
                       className={`
                         w-full flex items-center gap-3 px-4 py-2.5 text-left
                         hover:bg-neutral-50 focus:bg-neutral-50
@@ -236,15 +273,15 @@ const DropdownMenu = ({
                       {item.icon && (
                         <item.icon className="w-4 h-4 text-neutral-600 flex-shrink-0" />
                       )}
-                      <span className="text-sm font-medium text-neutral-900">
+                      <span className="text-sm font-medium text-neutral-900 flex-1">
                         {item.label}
                       </span>
                       {item.badge && (
-                        <span className="ml-auto px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
                           {item.badge}
                         </span>
                       )}
-                    </ItemComponent>
+                    </button>
                   </motion.div>
                 )
               })}

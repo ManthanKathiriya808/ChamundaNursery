@@ -48,8 +48,6 @@ const AdminProductsEnhanced = React.lazy(() => import('./admin/ProductsEnhanced.
 const AdminCategories = React.lazy(() => import('./admin/Categories.jsx'))
 const AdminOrders = React.lazy(() => import('./admin/Orders.jsx'))
 const AdminUsers = React.lazy(() => import('./admin/Users.jsx'))
-const DemoForm = React.lazy(() => import('./components/forms/DemoForm.jsx'))
-const TestAuth = React.lazy(() => import('./pages/TestAuth.jsx'))
 const AdminReviews = React.lazy(() => import('./admin/Reviews.jsx'))
 const AdminBulkUpload = React.lazy(() => import('./admin/BulkUpload.jsx'))
 
@@ -130,10 +128,7 @@ createRoot(document.getElementById('root')).render(
                   <Route path="reviews" element={<AdminReviews />} />
                   <Route path="bulk-upload" element={<AdminBulkUpload />} />
                 </Route>
-                
-                {/* Demo Routes */}
-            <Route path="/demo/form" element={<DemoForm />} />
-            <Route path="/test-auth" element={<TestAuth />} />
+
               </Routes>
           </Suspense>
             </ErrorBoundary>

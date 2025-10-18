@@ -61,20 +61,11 @@ export default function VideoHeroCarousel({ slides = defaultSlides, delay = 3000
     const calculateHeight = () => {
       const viewportHeight = window.innerHeight
       
-      // Try to get actual header height from DOM
-      const announcementBar = document.querySelector('[class*="top-0"][class*="bg-green-600"]')
-      const mainHeader = document.querySelector('header[class*="top-8"]')
+      // Get header height from CSS custom property set by Header component
+      const headerHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 120
       
-      let headerHeight = 120 // fallback height
-      
-      if (announcementBar && mainHeader) {
-        const announcementHeight = announcementBar.offsetHeight
-        const mainHeaderHeight = mainHeader.offsetHeight
-        headerHeight = announcementHeight + mainHeaderHeight
-      }
-      
-      // Ensure minimum height and maximum utilization of viewport
-      const calculatedHeight = Math.max(400, viewportHeight - headerHeight)
+      // Use full viewport height minus header for true full-page experience
+      const calculatedHeight = viewportHeight - headerHeight
       setHeroHeight(`${calculatedHeight}px`)
     }
 
