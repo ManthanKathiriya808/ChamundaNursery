@@ -14,6 +14,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import ImageLazy from './ImageLazy.jsx'
 import LottieAnimation from './animations/LottieAnimation.jsx'
+import { useCategories } from '../hooks/usePublicData.js'
 
 import { 
   Instagram, 
@@ -75,6 +76,7 @@ const animationConfigs = {
 export default function Footer() {
   const [newsletterSubmitted, setNewsletterSubmitted] = useState(false)
   const reduceMotion = useReducedMotion()
+  const { data: categoriesData } = useCategories()
   
   // Newsletter form with react-hook-form
   const {
@@ -131,42 +133,79 @@ export default function Footer() {
     }
   ]
 
-  // Navigation sections
-  const navigationSections = [
-    {
-      title: "Shop",
-      ariaLabel: "Shop categories",
-      links: [
-        { to: "/catalog?category=indoor", label: "Indoor Plants", icon: Leaf },
-        { to: "/catalog?category=outdoor", label: "Outdoor Plants", icon: Grid3X3 },
-        { to: "/catalog?category=seeds", label: "Seeds & Bulbs", icon: Heart },
-        { to: "/catalog?category=tools", label: "Garden Tools", icon: Star },
-        { to: "/catalog?category=pots", label: "Pots & Planters", icon: Grid3X3 }
-      ]
-    },
-    {
-      title: "Support",
-      ariaLabel: "Customer support",
-      links: [
-        { to: "/faq", label: "FAQ", icon: HelpCircle },
-        { to: "/contact", label: "Contact Us", icon: Phone },
-        { to: "/care", label: "Plant Care Guide", icon: Heart },
-        { to: "/privacy", label: "Privacy Policy", icon: Shield },
-        { to: "/terms", label: "Terms of Service", icon: Shield }
-      ]
-    },
-    {
-      title: "Company",
-      ariaLabel: "About company",
-      links: [
-        { to: "/about", label: "About Us", icon: Heart },
-        { to: "/blog", label: "Blog", icon: Leaf },
-        { to: "/careers", label: "Careers", icon: Star },
-        { to: "/sustainability", label: "Sustainability", icon: Leaf },
-        { to: "/wholesale", label: "Wholesale", icon: Grid3X3 }
-      ]
+  // Navigation sections - use dynamic categories for shop section
+  const navigationSections = React.useMemo(() => {
+    const shopLinks = []
+    
+    if (categoriesData?.categories && categoriesData.categories.length > 0) {
+      // Get subcategories only (categories with parent_id)
+      const subcategories = categoriesData.categories
+        .filter(cat => cat.parent_id) // Only subcategories
+        .sort((a, b) => a.sort_order - b.sort_order) // Sort by sort_order
+      
+      // Separate plant and supply subcategories
+      const plantSubcategories = subcategories.filter(cat => cat.parent_id === 1) // Plants parent ID
+      const supplySubcategories = subcategories.filter(cat => cat.parent_id === 2) // Supplies parent ID
+      
+      // Add 3 plant subcategories
+      plantSubcategories.slice(0, 3).forEach(category => {
+        shopLinks.push({
+          to: `/catalog?category=${category.slug}`,
+          label: category.name,
+          icon: Leaf
+        })
+      })
+      
+      // Add 2 supply subcategories
+      supplySubcategories.slice(0, 2).forEach(category => {
+        shopLinks.push({
+          to: `/catalog?category=${category.slug}`,
+          label: category.name,
+          icon: category.name.toLowerCase().includes('tool') ? Star : 
+                category.name.toLowerCase().includes('seed') ? Heart : Grid3X3
+        })
+      })
+    } else {
+      // Fallback to hardcoded categories
+      shopLinks.push(
+        { to: "/catalog?category=indoor-plants", label: "Indoor Plants", icon: Leaf },
+        { to: "/catalog?category=outdoor-plants", label: "Outdoor Plants", icon: Leaf },
+        { to: "/catalog?category=flowering-plants", label: "Flowering Plants", icon: Leaf },
+        { to: "/catalog?category=tools", label: "Tools", icon: Star },
+        { to: "/catalog?category=seeds", label: "Seeds", icon: Heart }
+      )
     }
-  ]
+
+    return [
+      {
+        title: "Shop",
+        ariaLabel: "Shop categories",
+        links: shopLinks
+      },
+      {
+        title: "Support",
+        ariaLabel: "Customer support",
+        links: [
+          { to: "/faq", label: "FAQ", icon: HelpCircle },
+          { to: "/contact", label: "Contact Us", icon: Phone },
+          { to: "/care", label: "Plant Care Guide", icon: Heart },
+          { to: "/privacy", label: "Privacy Policy", icon: Shield },
+          { to: "/terms", label: "Terms of Service", icon: Shield }
+        ]
+      },
+      {
+        title: "Company",
+        ariaLabel: "About company",
+        links: [
+          { to: "/about", label: "About Us", icon: Heart },
+          { to: "/blog", label: "Blog", icon: Leaf },
+          { to: "/careers", label: "Careers", icon: Star },
+          { to: "/sustainability", label: "Sustainability", icon: Leaf },
+          { to: "/wholesale", label: "Wholesale", icon: Grid3X3 }
+        ]
+      }
+    ]
+  }, [categoriesData?.categories])
 
   return (
     <footer className="relative mt-auto bg-gradient-to-br from-green-50 via-cream to-blue-50 border-t border-green-200/50">

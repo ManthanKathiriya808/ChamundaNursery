@@ -29,7 +29,7 @@ import {
 import { useProducts } from '../../hooks/queries/useProducts'
 import { useOrders } from '../../hooks/queries/useOrders'
 import { useUIStore } from '../../stores/uiStore'
-import { LoadingSpinner } from '../../components/LoadingSpinner'
+import LoadingSpinner from '../../components/LoadingSpinner'
 import { NotificationSystem } from '../../components/NotificationSystem'
 
 export default function AdminDashboard() {

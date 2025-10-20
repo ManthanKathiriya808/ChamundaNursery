@@ -7,6 +7,7 @@ import { Menu, X, Home, Grid3X3, FileText, User, ShoppingCart, ShieldCheck, Phon
 import { useCart } from '../hooks/CartProvider.jsx'
 import { useUser, useAuth, useUserDisplayName } from '../hooks/useAuth.js'
 import { useData } from '../context/DataProvider.jsx'
+import { useCategories } from '../hooks/usePublicData.js'
 import HamburgerMenu from './animations/HamburgerMenu.jsx'
 import DropdownMenu from './ui/DropdownMenu.jsx'
 import CartIcon from './animations/CartIcon.jsx'
@@ -23,6 +24,7 @@ export default function Header() {
   const { isSignedIn, signOut } = useAuth()
   const displayName = useUserDisplayName()
   const { products } = useData()
+  const { data: categoriesData } = useCategories()
   const reduceMotion = useReducedMotion()
   const accountRef = useRef(null)
   const headerRef = useRef(null)
@@ -33,8 +35,27 @@ export default function Header() {
     navigate('/cart')
   }
 
-  // Generate categories from products
+  // Generate categories from API data or fallback to products
   const categories = React.useMemo(() => {
+    if (categoriesData?.categories && categoriesData.categories.length > 0) {
+      // Use API categories - show all categories for header display
+      return categoriesData.categories
+        .filter(cat => cat.status === 'active') // Only show active categories
+        .map(cat => ({
+          id: cat.slug,
+          name: cat.name,
+          count: 0, // Will be updated when we have product counts
+          level: cat.level || 0,
+          parent_id: cat.parent_id
+        }))
+        .sort((a, b) => {
+          // Sort by level first (main categories first), then by name
+          if (a.level !== b.level) return a.level - b.level
+          return a.name.localeCompare(b.name)
+        })
+    }
+    
+    // Fallback: Generate categories from products
     if (!products || products.length === 0) return []
     
     const categoryMap = new Map()
@@ -55,7 +76,7 @@ export default function Header() {
     })
     
     return Array.from(categoryMap.values()).sort((a, b) => b.count - a.count)
-  }, [products])
+  }, [categoriesData?.categories, products])
 
   // Handle scroll for smart sticky behavior
   useEffect(() => {
@@ -66,12 +87,26 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Sample search suggestions (in production, fetch from API)
-  const searchSuggestions = [
-    'Indoor Plants', 'Outdoor Plants', 'Bonsai Trees', 'Fruit Plants',
-    'Vegetable Seeds', 'Garden Tools', 'Plant Pots', 'Fertilizers',
-    'Succulents', 'Flowering Plants', 'Herbs', 'Bamboo Plants'
-  ]
+  // Generate search suggestions from dynamic categories or fallback to hardcoded ones
+  const searchSuggestions = React.useMemo(() => {
+    if (categoriesData?.categories && categoriesData.categories.length > 0) {
+      // Use dynamic categories for search suggestions
+      const suggestions = categoriesData.categories
+        .slice(0, 8) // Limit to 8 suggestions
+        .map(cat => cat.name)
+      
+      // Add some generic plant-related terms
+      const genericTerms = ['Bonsai Trees', 'Fruit Plants', 'Vegetable Seeds', 'Fertilizers']
+      return [...suggestions, ...genericTerms].slice(0, 12)
+    }
+    
+    // Fallback to hardcoded suggestions
+    return [
+      'Indoor Plants', 'Outdoor Plants', 'Bonsai Trees', 'Fruit Plants',
+      'Vegetable Seeds', 'Garden Tools', 'Plant Pots', 'Fertilizers',
+      'Succulents', 'Flowering Plants', 'Herbs', 'Bamboo Plants'
+    ]
+  }, [categoriesData?.categories])
 
   // Sample recent searches (in production, get from localStorage or user data)
   const recentSearches = ['Roses', 'Tomato Seeds', 'Garden Soil']
@@ -306,46 +341,33 @@ export default function Header() {
         />
       </div>
 
-      {/* Category navbar with enhanced dropdown */}
+      {/* Category navbar with horizontal slider */}
       <div className="hidden md:block border-t border-neutral-200">
         <nav aria-label="Categories" className="page-container py-2">
           <div className="flex items-center gap-4">
-            {/* Categories dropdown */}
-            <DropdownMenu
-              trigger={
-                <>
-                  <Grid3X3 className="w-4 h-4" />
-                  <span>Categories</span>
-                </>
-              }
-              items={categories.map(category => ({
-                label: category.name,
-                href: `/catalog?category=${category.id}`,
-                icon: (
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary text-sm font-medium">
-                      {category.name.charAt(0)}
-                    </span>
-                  </div>
-                ),
-                description: `${category.count} items`
-              }))}
-              align="left"
-              variant="grid"
-              ariaLabel="Categories menu"
-            />
-            {/* Quick category links */}
-            <div className="flex items-center gap-4 text-sm overflow-x-auto">
-              {['Indoor','Outdoor','Bonsai','Fruits','Vegetables','Seeds','Tools','Pots'].map((label) => (
-                <NavLink
-                  key={label}
-                  to={`/catalog?category=${label.toLowerCase()}`}
-                  className="inline-flex items-center gap-2 px-2 py-1 rounded-md text-neutral-700 hover:bg-softGray/60 whitespace-nowrap"
-                >
-                  <Sprout className="h-4 w-4 text-neutral-600" aria-hidden />
-                  <span>{label} {categoryEmoji[label.toLowerCase()] || ''}</span>
-                </NavLink>
-              ))}
+            {/* All categories link */}
+            <NavLink
+              to="/catalog"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-neutral-700 hover:bg-softGray/60 whitespace-nowrap flex-shrink-0 font-medium border border-neutral-200 hover:border-neutral-300"
+            >
+              <Grid3X3 className="w-4 h-4" />
+              <span>All</span>
+            </NavLink>
+            
+            {/* Categories slider */}
+            <div className="flex-1 overflow-hidden">
+              <div className="flex items-center gap-3 text-sm overflow-x-auto scrollbar-hide pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                {categories.map((category) => (
+                  <NavLink
+                    key={category.id}
+                    to={`/catalog?category=${category.id}`}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-neutral-700 hover:bg-softGray/60 whitespace-nowrap flex-shrink-0 transition-colors duration-200"
+                  >
+                    <Sprout className="h-4 w-4 text-neutral-600" aria-hidden />
+                    <span>{category.name} {categoryEmoji[category.name.toLowerCase()] || ''}</span>
+                  </NavLink>
+                ))}
+              </div>
             </div>
           </div>
         </nav>
@@ -451,7 +473,7 @@ export default function Header() {
                       </button>
                     )}
                     <button
-                      onClick={() => { setMobileOpen(false); openDrawer() }}
+                          onClick={handleCartClick}
                       className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-softGray/60 min-h-[44px]"
                     >
                       <ShoppingCart aria-hidden />

@@ -13,76 +13,29 @@ import {
   TrendingUp,
   AlertTriangle
 } from 'lucide-react';
+import { useCategories } from '../../hooks/usePublicData.js';
+import { useAdminProducts } from '../../hooks/queries/useProducts.js';
 
 const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  
+  const { data: categoriesData } = useCategories();
+  
+  // Dynamic products data from API
+  const { 
+    data: productsData, 
+    isLoading: productsLoading, 
+    error: productsError 
+  } = useAdminProducts({
+    search: searchTerm,
+    category: filterCategory !== 'all' ? filterCategory : '',
+    status: filterStatus !== 'all' ? filterStatus : '',
+  });
 
-  // Mock products data
-  const products = [
-    {
-      id: 1,
-      name: 'Monstera Deliciosa',
-      category: 'Indoor Plants',
-      price: 45.99,
-      stock: 25,
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1545241047-6083a3684587?w=100',
-      sales: 124,
-      rating: 4.8,
-      createdAt: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: 'Snake Plant',
-      category: 'Indoor Plants',
-      price: 32.99,
-      stock: 0,
-      status: 'out_of_stock',
-      image: 'https://images.unsplash.com/photo-1593691509543-c55fb32d8de5?w=100',
-      sales: 89,
-      rating: 4.9,
-      createdAt: '2024-01-10'
-    },
-    {
-      id: 3,
-      name: 'Fiddle Leaf Fig',
-      category: 'Indoor Plants',
-      price: 68.99,
-      stock: 12,
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1586093248292-4e6636b4e3b8?w=100',
-      sales: 156,
-      rating: 4.6,
-      createdAt: '2024-01-05'
-    },
-    {
-      id: 4,
-      name: 'Peace Lily',
-      category: 'Indoor Plants',
-      price: 28.99,
-      stock: 8,
-      status: 'low_stock',
-      image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=100',
-      sales: 92,
-      rating: 4.7,
-      createdAt: '2024-01-02'
-    },
-    {
-      id: 5,
-      name: 'Rubber Plant',
-      category: 'Indoor Plants',
-      price: 42.99,
-      stock: 18,
-      status: 'active',
-      image: 'https://images.unsplash.com/photo-1509423350716-97f2360af2e4?w=100',
-      sales: 78,
-      rating: 4.5,
-      createdAt: '2023-12-28'
-    }
-  ];
+  const products = productsData?.products || [];
 
   const stats = [
     {
@@ -133,8 +86,8 @@ const AdminProducts = () => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
+                         (product.Category?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || product.Category?.name === filterCategory;
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
     
     return matchesSearch && matchesCategory && matchesStatus;
@@ -218,10 +171,20 @@ const AdminProducts = () => {
               className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="all">All Categories</option>
-              <option value="Indoor Plants">Indoor Plants</option>
-              <option value="Outdoor Plants">Outdoor Plants</option>
-              <option value="Succulents">Succulents</option>
-              <option value="Accessories">Accessories</option>
+              {categoriesData?.categories && categoriesData.categories.length > 0 ? (
+                categoriesData.categories.map(category => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="Indoor Plants">Indoor Plants</option>
+                  <option value="Outdoor Plants">Outdoor Plants</option>
+                  <option value="Succulents">Succulents</option>
+                  <option value="Accessories">Accessories</option>
+                </>
+              )}
             </select>
 
             <select
@@ -326,7 +289,7 @@ const AdminProducts = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {product.category}
+                    {product.Category?.name || 'No Category'}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     ${product.price}

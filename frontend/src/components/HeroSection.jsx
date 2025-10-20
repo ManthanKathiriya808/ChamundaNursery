@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Leaf, Truck, ShieldCheck, Search, Sprout, Shovel } from 'lucide-react'
 import ImageLazy from './ImageLazy.jsx'
 import LottieAnimation from './animations/LottieAnimation.jsx'
+import { useCategories } from '../hooks/queries/useCategories'
 
 // Animation data for hero section
 const heroAnimations = {
@@ -30,6 +31,53 @@ const animationConfigs = {
 
 
 export default function HeroSection() {
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories()
+  
+  // Get main categories for hero section (limit to 4)
+  const heroCategories = React.useMemo(() => {
+    if (!categories.length) return []
+    
+    // Get main categories (no parent) and their first level children
+    const mainCategories = categories.filter(cat => !cat.parentId && cat.status === 'active')
+    const result = []
+    
+    // Add main categories and some subcategories up to 4 items
+    mainCategories.forEach(mainCat => {
+      if (result.length < 4) {
+        result.push({
+          name: mainCat.name,
+          slug: mainCat.slug,
+          icon: getIconForCategory(mainCat.name)
+        })
+      }
+      
+      // Add subcategories if we still have space
+      const subcategories = categories.filter(cat => 
+        cat.parentId === mainCat.id && cat.status === 'active'
+      )
+      
+      subcategories.forEach(subCat => {
+        if (result.length < 4) {
+          result.push({
+            name: subCat.name,
+            slug: subCat.slug,
+            icon: getIconForCategory(subCat.name)
+          })
+        }
+      })
+    })
+    
+    return result.slice(0, 4)
+  }, [categories])
+  
+  // Helper function to get appropriate icon for category
+  const getIconForCategory = (categoryName) => {
+    const name = categoryName.toLowerCase()
+    if (name.includes('seed')) return Sprout
+    if (name.includes('tool')) return Shovel
+    return Leaf
+  }
+
   return (
     <section aria-label="Hero" className="mb-10">
       <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-gradient-to-br from-primary via-accent to-primaryDark text-neutral-900">
@@ -48,99 +96,109 @@ export default function HeroSection() {
           <div className="h-full w-full bg-[radial-gradient(circle_at_20%_20%,white_0,transparent_35%),radial-gradient(circle_at_80%_30%,white_0,transparent_35%)]" />
         </div>
 
-        <div className="relative grid grid-cols-1 md:grid-cols-[1.15fr_0.85fr] gap-6 p-6 md:p-10">
-          {/* Left: title, subheading, CTAs, badges */}
-          <div className="flex flex-col justify-center">
-            <motion.h1
-              className="heading-hero text-white drop-shadow"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              Grow Something Extraordinary Today
-            </motion.h1>
-            <motion.p
-              className="mt-3 text-white/90 max-w-2xl"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.12 }}
-            >
-              Premium plants and supplies from Chamunda Nursery. High-quality greens, expert care, fast delivery.
-            </motion.p>
+        <div className="relative px-4 py-8 md:px-8 md:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Left content */}
+            <div className="space-y-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+                  Premium plants and supplies from Chamunda Nursery. High-quality greens, expert care, fast delivery.
+                </h1>
+              </motion.div>
 
-            <motion.div
-              className="mt-6 flex flex-wrap gap-3"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Link to="/catalog" className="btn btn-primary flex items-center gap-2">
-                <span>Shop Plants</span>
-                {/* Watering can animation for CTA */}
-                <LottieAnimation
-                  animationData={heroAnimations.wateringCan}
-                  width={24}
-                  height={24}
-                  {...animationConfigs.ui}
-                />
-              </Link>
-              <Link to="/catalog?category=tools" className="btn btn-accent">
-                Explore Tools
-              </Link>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="flex flex-col sm:flex-row gap-4"
+              >
+                <Link to="/catalog" className="btn btn-primary group">
+                  <span>Shop Plants</span>
+                  <Leaf className="ml-2 h-4 w-4 transition-transform group-hover:scale-110" />
+                </Link>
+                <Link to="/catalog?category=tools" className="btn btn-accent">
+                  Explore Tools
+                  <Shovel className="ml-2 h-4 w-4" />
+                </Link>
+              </motion.div>
 
-            {/* Quick search */}
-            <div className="mt-6 max-w-lg">
-              <label htmlFor="hero-search" className="sr-only">Search products</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/80" aria-hidden="true" />
+              {/* Search bar */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="relative"
+              >
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 h-5 w-5" />
                 <input
-                  id="hero-search"
-                  type="search"
+                  type="text"
                   placeholder="Search plants, seeds, tools…"
-                  className="w-full rounded-md bg-white/95 pl-10 pr-3 py-2 text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primaryLight"
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary focus:border-transparent bg-white/90 backdrop-blur-sm"
                 />
-              </div>
+              </motion.div>
             </div>
 
-            {/* Trust badges */}
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[{ icon: Leaf, label: 'Healthy & Fresh' }, { icon: Truck, label: 'Fast Delivery' }, { icon: ShieldCheck, label: 'Secure Payments' }].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-white backdrop-blur transition-transform focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  <span className="text-sm font-medium">{label}</span>
+            {/* Right content - Visual */}
+            <div className="relative">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="relative"
+              >
+                <div className="aspect-square rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 p-6 flex flex-col items-center justify-center">
+                  <div className="relative w-32 h-32 mb-4">
+                    <LottieAnimation
+                      animationData={heroAnimations.plantGrowing}
+                      width="100%"
+                      height="100%"
+                      className="absolute inset-0"
+                      {...animationConfigs.hero}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-display text-xl font-semibold mb-2">Grow Your Garden</h3>
+                    <p className="text-sm opacity-80">Premium quality, expert care</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right: image collage / promo card */}
-          <div className="relative">
-            <div className="surface surface-hover bg-white/90 p-4 md:p-6">
-              {/* Main plant growing animation */}
-              <div className="relative w-full h-56 md:h-72 rounded-lg bg-gradient-to-br from-green-50 to-blue-50 overflow-hidden">
-                <LottieAnimation
-                  animationData={heroAnimations.plantGrowing}
-                  width="100%"
-                  height="100%"
-                  className="absolute inset-0"
-                  {...animationConfigs.hero}
-                />
-                {/* Fallback logo if animation fails to load */}
-                <ImageLazy 
-                  src="/logo.svg" 
-                  alt="Chamunda Nursery" 
-                  className="absolute inset-0 w-full h-full object-contain opacity-20" 
-                />
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {['Indoor Plants', 'Outdoor', 'Seeds', 'Tools'].map((c) => (
-                  <Link key={c} to={`/catalog?category=${c.toLowerCase()}`} className="rounded-md bg-accentSoft text-primary px-3 py-2 text-sm font-medium hover:bg-accentLight inline-flex items-center gap-2 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-                    {c}
-                    {c === 'Seeds' ? <Sprout className="h-4 w-4" aria-hidden /> : c === 'Tools' ? <Shovel className="h-4 w-4" aria-hidden /> : <Leaf className="h-4 w-4" aria-hidden />}
-                  </Link>
-                ))}
-              </div>
+                
+                {/* Floating logo */}
+                <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/30 backdrop-blur-sm border border-white/40 flex items-center justify-center">
+                  <ImageLazy 
+                    src="/logo.svg" 
+                    alt="Chamunda Nursery" 
+                    className="absolute inset-0 w-full h-full object-contain opacity-20" 
+                  />
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {categoriesLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="rounded-md bg-white/20 px-3 py-2 animate-pulse">
+                        <div className="h-4 bg-white/30 rounded w-16"></div>
+                      </div>
+                    ))
+                  ) : (
+                    heroCategories.map((category) => {
+                      const IconComponent = category.icon
+                      return (
+                        <Link 
+                          key={category.slug} 
+                          to={`/catalog?category=${category.slug}`} 
+                          className="rounded-md bg-accentSoft text-primary px-3 py-2 text-sm font-medium hover:bg-accentLight inline-flex items-center gap-2 transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        >
+                          {category.name}
+                          <IconComponent className="h-4 w-4" aria-hidden />
+                        </Link>
+                      )
+                    })
+                  )}
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -150,14 +208,20 @@ export default function HeroSection() {
       <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { k: '50k+', v: 'Plants Delivered' },
-          { k: '100+', v: 'Species' },
-          { k: '12+', v: 'Years Experience' },
-          { k: '4.8★', v: 'Average Rating' },
-        ].map((s) => (
-          <div key={s.v} className="surface p-4 text-center">
-            <div className="text-xl font-semibold text-primary">{s.k}</div>
-            <div className="text-sm text-neutral-700">{s.v}</div>
-          </div>
+          { k: '98%', v: 'Happy Customers' },
+          { k: '24/7', v: 'Plant Care Support' },
+          { k: '500+', v: 'Plant Varieties' }
+        ].map(({ k, v }) => (
+          <motion.div
+            key={v}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="text-center p-4 rounded-lg bg-white border border-neutral-200"
+          >
+            <div className="font-display text-2xl font-bold text-primary">{k}</div>
+            <div className="text-sm text-neutral-600">{v}</div>
+          </motion.div>
         ))}
       </div>
     </section>

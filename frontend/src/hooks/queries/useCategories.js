@@ -14,11 +14,35 @@ const categoryAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/categories?${params}`)
+    // Use public endpoint for categories (admin endpoint requires auth)
+    const response = await fetch(`${API_BASE}/categories?${params}`, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
     if (!response.ok) {
       throw new Error(`Failed to fetch categories: ${response.statusText}`)
     }
-    return response.json()
+    const result = await response.json()
+    
+    // Extract data from response object
+    const data = result.data || result
+    
+    // Transform backend field names to frontend field names
+    const transformCategories = (categories) => {
+      if (!Array.isArray(categories)) return []
+      
+      return categories.map(category => ({
+        ...category,
+        parentId: category.parent_id,
+        isActive: category.status === 'active',
+        sortOrder: category.sort_order || 0,
+        seoTitle: category.meta_title,
+        seoDescription: category.meta_description
+      }))
+    }
+    
+    return transformCategories(data)
   },
 
   getById: async (id) => {
@@ -26,17 +50,52 @@ const categoryAPI = {
     if (!response.ok) {
       throw new Error(`Failed to fetch category: ${response.statusText}`)
     }
-    return response.json()
+    const data = await response.json()
+    
+    // Transform backend field names to frontend field names
+    return {
+      ...data,
+      parentId: data.parent_id,
+      isActive: data.status === 'active',
+      sortOrder: data.sort_order || 0,
+      seoTitle: data.meta_title,
+      seoDescription: data.meta_description
+    }
   },
 
   create: async (categoryData) => {
+    // Generate slug if not provided
+    const slug = categoryData.slug || categoryData.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+    
+    // Transform frontend field names to backend field names
+    const transformedData = {
+      ...categoryData,
+      slug,
+      parent_id: categoryData.parentId || null,
+      status: categoryData.isActive ? 'active' : 'inactive',
+      sort_order: categoryData.sortOrder || 0,
+      meta_title: categoryData.seoTitle || null,
+      meta_description: categoryData.seoDescription || null
+    }
+    
+    // Remove frontend-specific fields
+    delete transformedData.parentId
+    delete transformedData.isActive
+    delete transformedData.sortOrder
+    delete transformedData.seoTitle
+    delete transformedData.seoDescription
+    delete transformedData.seoKeywords
+    
     const response = await fetch(`${API_BASE}/admin/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
-      body: JSON.stringify(categoryData),
+      body: JSON.stringify(transformedData),
     })
     if (!response.ok) {
       throw new Error(`Failed to create category: ${response.statusText}`)
@@ -45,13 +104,31 @@ const categoryAPI = {
   },
 
   update: async ({ id, ...categoryData }) => {
+    // Transform frontend field names to backend field names
+    const transformedData = {
+      ...categoryData,
+      parent_id: categoryData.parentId || null,
+      status: categoryData.isActive ? 'active' : 'inactive',
+      sort_order: categoryData.sortOrder || 0,
+      meta_title: categoryData.seoTitle || null,
+      meta_description: categoryData.seoDescription || null
+    }
+    
+    // Remove frontend-specific fields
+    delete transformedData.parentId
+    delete transformedData.isActive
+    delete transformedData.sortOrder
+    delete transformedData.seoTitle
+    delete transformedData.seoDescription
+    delete transformedData.seoKeywords
+    
     const response = await fetch(`${API_BASE}/admin/categories/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
-      body: JSON.stringify(categoryData),
+      body: JSON.stringify(transformedData),
     })
     if (!response.ok) {
       throw new Error(`Failed to update category: ${response.statusText}`)
@@ -63,7 +140,7 @@ const categoryAPI = {
     const response = await fetch(`${API_BASE}/admin/categories/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
     })
     if (!response.ok) {
@@ -75,16 +152,16 @@ const categoryAPI = {
 
 // Query hooks
 export const useCategories = (filters = {}) => {
-  const { setLoading } = useUIStore()
-  
   return useQuery({
     queryKey: queryKeys.categories.list(filters),
     queryFn: () => categoryAPI.getAll(filters),
-    staleTime: 1000 * 60 * 5, // 5 minutes - categories don't change often
-    onSettled: () => setLoading('categories', false),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    retry: 2,
     onError: (error) => {
-      useUIStore.getState().showError(error.message, 'Failed to load categories')
-    },
+      console.error('Failed to fetch categories:', error)
+    }
   })
 }
 
@@ -131,15 +208,26 @@ export const useUpdateCategory = () => {
 
   return useMutation({
     mutationFn: categoryAPI.update,
-    onSuccess: (updatedCategory) => {
+    onSuccess: (response) => {
+      // Transform the backend response to frontend format
+      const updatedCategory = response.data || response
+      const transformedCategory = {
+        ...updatedCategory,
+        parentId: updatedCategory.parent_id,
+        isActive: updatedCategory.status === 'active',
+        sortOrder: updatedCategory.sort_order || 0,
+        seoTitle: updatedCategory.meta_title,
+        seoDescription: updatedCategory.meta_description
+      }
+      
       // Update the specific category in cache
       queryClient.setQueryData(
-        queryKeys.categories.detail(updatedCategory.id),
-        updatedCategory
+        queryKeys.categories.detail(transformedCategory.id),
+        transformedCategory
       )
       
-      // Invalidate categories list to reflect changes
-      queryClient.invalidateQueries({ queryKey: queryKeys.categories.lists() })
+      // Invalidate all categories queries to ensure UI updates
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
       
       showSuccess('Category updated successfully!')
     },

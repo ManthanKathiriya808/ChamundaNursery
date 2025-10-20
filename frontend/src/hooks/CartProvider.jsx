@@ -121,7 +121,7 @@ export default function CartProvider({ children }) {
   const closeDrawer = () => setDrawerOpen(false)
   const toggleDrawer = () => setDrawerOpen((o) => !o)
 
-  const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 1), 0)
+  const subtotal = Array.isArray(items) ? items.reduce((sum, i) => sum + (Number(i.price) || 0) * (i.qty || 1), 0) : 0
 
   const value = useMemo(() => ({ 
     items, 

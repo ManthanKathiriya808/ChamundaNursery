@@ -17,7 +17,7 @@ const orderAPI = {
     
     const response = await fetch(`${API_BASE}/admin/orders?${params}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
     })
     if (!response.ok) {
@@ -29,7 +29,7 @@ const orderAPI = {
   getById: async (id) => {
     const response = await fetch(`${API_BASE}/orders/${id}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
     })
     if (!response.ok) {
@@ -41,7 +41,7 @@ const orderAPI = {
   getUserOrders: async (userId) => {
     const response = await fetch(`${API_BASE}/orders/user/${userId}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
     })
     if (!response.ok) {
@@ -55,7 +55,7 @@ const orderAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
       body: JSON.stringify(orderData),
     })
@@ -70,7 +70,7 @@ const orderAPI = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
       body: JSON.stringify({ status }),
     })
@@ -84,7 +84,7 @@ const orderAPI = {
     const response = await fetch(`${API_BASE}/orders/${id}/cancel`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
     })
     if (!response.ok) {

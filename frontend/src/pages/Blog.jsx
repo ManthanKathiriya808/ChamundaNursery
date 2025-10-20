@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { 
@@ -12,15 +13,79 @@ import {
   BookOpen,
   Filter
 } from 'lucide-react'
-import { LoadingSpinner } from '../components/LoadingSpinner'
+import LoadingSpinner from '../components/LoadingSpinner'
+import { 
+  useBlogPosts, 
+  useFeaturedBlogs, 
+  useBlogCategories,
+  useApiError 
+} from '../hooks/usePublicData.js'
+import { 
+  BlogCardSkeleton, 
+  BlogGridSkeleton, 
+  ErrorState 
+} from '../components/LoadingSkeletons.jsx'
+import { useData } from '../context/DataProvider.jsx'
 
 export default function Blog() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [sortBy, setSortBy] = useState('latest')
+  const [page, setPage] = useState(1)
+  const limit = 12
+
+  // Fallback data from context
+  const { blogPosts: fallbackBlogPosts } = useData()
+
+  // Dynamic API data with pagination and filtering
+  const { 
+    data: blogData, 
+    isLoading: blogLoading, 
+    error: blogError 
+  } = useBlogPosts({
+    page,
+    limit,
+    category: selectedCategory !== 'all' ? selectedCategory : undefined,
+    sort: sortBy,
+    search: searchTerm.length > 2 ? searchTerm : undefined
+  })
+
+  // Featured blog posts
+  const { 
+    data: featuredData, 
+    isLoading: featuredLoading, 
+    error: featuredError 
+  } = useFeaturedBlogs(2)
+
+  // Blog categories for filtering
+  const { 
+    data: categoriesData, 
+    isLoading: categoriesLoading, 
+    error: categoriesError 
+  } = useBlogCategories()
+
+  // Error handling
+  const blogErrorInfo = useApiError(blogError)
+  const featuredErrorInfo = useApiError(featuredError)
+  const categoriesErrorInfo = useApiError(categoriesError)
+
+  // Memoized data with fallbacks
+  const blogPosts = useMemo(() => {
+    return blogData?.posts || fallbackBlogPosts || []
+  }, [blogData, fallbackBlogPosts])
+
+  const featuredPosts = useMemo(() => {
+    return featuredData || (fallbackBlogPosts?.filter(post => post.featured) || [])
+  }, [featuredData, fallbackBlogPosts])
+
+  const categories = useMemo(() => {
+    const apiCategories = Array.isArray(categoriesData) ? categoriesData.map(cat => cat.name) : []
+    const fallbackCategories = ['Plant Care', 'Plant Selection', 'Seasonal Care', 'Gardening', 'Health & Wellness']
+    return ['all', ...(apiCategories.length > 0 ? apiCategories : fallbackCategories)]
+  }, [categoriesData])
 
   // Mock blog data - in real app, this would come from React Query
-  const blogPosts = [
+  const mockBlogPosts = [
     {
       id: 1,
       title: 'Complete Guide to Indoor Plant Care',
@@ -101,25 +166,7 @@ export default function Blog() {
     }
   ]
 
-  const categories = [
-    'all',
-    'Plant Care',
-    'Plant Selection',
-    'Seasonal Care',
-    'Gardening',
-    'Health & Wellness'
-  ]
-
-  const featuredPosts = blogPosts.filter(post => post.featured)
-  const regularPosts = blogPosts.filter(post => !post.featured)
-
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
-
+  // Remove static data definitions that conflict with dynamic data
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -178,7 +225,10 @@ export default function Blog() {
                   type="text"
                   placeholder="Search articles..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setPage(1) // Reset to first page on search
+                  }}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
@@ -186,23 +236,40 @@ export default function Blog() {
               {/* Category Filter */}
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-gray-500" />
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  {categories.map(category => (
-                    <option key={category} value={category}>
-                      {category === 'all' ? 'All Categories' : category}
-                    </option>
-                  ))}
-                </select>
+                {categoriesLoading ? (
+                  <div className="w-40 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+                ) : categoriesErrorInfo ? (
+                  <ErrorState 
+                    title="Failed to load categories"
+                    message={categoriesErrorInfo.message}
+                    onRetry={retryCategories}
+                    className="text-sm"
+                  />
+                ) : (
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value)
+                      setPage(1) // Reset to first page on filter change
+                    }}
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    {categories.map(category => (
+                      <option key={category} value={category}>
+                        {category === 'all' ? 'All Categories' : category}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Sort */}
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  setSortBy(e.target.value)
+                  setPage(1) // Reset to first page on sort change
+                }}
                 className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
                 <option value="latest">Latest First</option>
@@ -215,7 +282,33 @@ export default function Blog() {
       </section>
 
       {/* Featured Posts */}
-      {featuredPosts.length > 0 && (
+      {featuredLoading ? (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Featured Articles</h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Our most popular and comprehensive plant care guides
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <BlogCardSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : featuredErrorInfo ? (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <ErrorState 
+              title="Failed to load featured articles"
+              message={featuredErrorInfo.message}
+              onRetry={retryFeatured}
+            />
+          </div>
+        </section>
+      ) : featuredPosts.length > 0 && (
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <motion.div
@@ -242,7 +335,7 @@ export default function Blog() {
                 >
                   <div className="aspect-video overflow-hidden">
                     <img
-                      src={post.coverImage}
+                      src={post.coverImage || post.image}
                       alt={post.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
@@ -276,10 +369,13 @@ export default function Blog() {
                         <span className="text-sm text-gray-600">{post.author}</span>
                       </div>
                       
-                      <button className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium transition-colors">
+                      <Link 
+                        to={`/blog/${post.id}`}
+                        className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium transition-colors"
+                      >
                         Read More
                         <ArrowRight className="w-4 h-4" />
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </motion.article>
@@ -302,89 +398,143 @@ export default function Blog() {
               {searchTerm || selectedCategory !== 'all' ? 'Search Results' : 'Latest Articles'}
             </h2>
             <p className="text-gray-600">
-              {filteredPosts.length} article{filteredPosts.length !== 1 ? 's' : ''} found
+              {blogLoading ? 'Loading articles...' : `${blogData?.total || blogPosts.length} article${(blogData?.total || blogPosts.length) !== 1 ? 's' : ''} found`}
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post, index) => (
-              <motion.article
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 group border border-gray-100"
-              >
-                <div className="aspect-video overflow-hidden">
-                  <img
-                    src={post.coverImage}
-                    alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                </div>
-                
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                      {post.category}
-                    </span>
-                    {post.featured && (
-                      <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-                  
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-2">
-                    {post.title}
-                  </h3>
-                  
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">{post.excerpt}</p>
-                  
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <User className="w-4 h-4" />
-                      {post.author}
+          {blogLoading ? (
+            <BlogGridSkeleton count={limit} />
+          ) : blogErrorInfo ? (
+            <ErrorState 
+              title="Failed to load articles"
+              message={blogErrorInfo.message}
+              onRetry={retryBlog}
+            />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {blogPosts.map((post, index) => (
+                  <motion.article
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 group border border-gray-100"
+                  >
+                    <div className="aspect-video overflow-hidden">
+                      <img
+                        src={post.coverImage || post.image}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {post.readTime}
+                    
+                    <div className="p-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                          {post.category}
+                        </span>
+                        {post.featured && (
+                          <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                      
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{post.excerpt}</p>
+                      
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {post.author}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {post.readTime}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">
+                            {formatDate(post.publishedAt)}
+                          </span>
+                          <Link 
+                            to={`/blog/${post.id}`}
+                            className="text-green-600 hover:text-green-700 font-medium text-sm transition-colors"
+                          >
+                            Read Article →
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">
-                        {formatDate(post.publishedAt)}
-                      </span>
-                      <button className="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
-                        Read Article →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.article>
-            ))}
-          </div>
+                  </motion.article>
+                ))}
+              </div>
 
-          {filteredPosts.length === 0 && (
-            <div className="text-center py-12">
-              <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles found</h3>
-              <p className="text-gray-600 mb-6">
-                Try adjusting your search terms or browse all categories
-              </p>
-              <button
-                onClick={() => {
-                  setSearchTerm('')
-                  setSelectedCategory('all')
-                }}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-              >
-                Clear Filters
-              </button>
-            </div>
+              {/* Pagination */}
+              {blogData?.totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-2 mt-12">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, blogData.totalPages) }, (_, i) => {
+                    const pageNum = i + 1
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`px-4 py-2 rounded-md border ${
+                          page === pageNum
+                            ? 'border-green-500 bg-green-500 text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  })}
+                  
+                  <button
+                    onClick={() => setPage(p => Math.min(blogData.totalPages, p + 1))}
+                    disabled={page === blogData.totalPages}
+                    className="px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+
+              {blogPosts.length === 0 && !blogLoading && (
+                <div className="text-center py-12">
+                  <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No articles found</h3>
+                  <p className="text-gray-600 mb-6">
+                    Try adjusting your search terms or browse all categories
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchTerm('')
+                      setSelectedCategory('all')
+                      setPage(1)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

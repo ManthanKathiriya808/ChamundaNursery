@@ -1,47 +1,35 @@
+/**
+ * React Query Configuration for Chamunda Nursery
+ * Optimized for caching, real-time updates, and performance
+ */
+
 import { QueryClient } from '@tanstack/react-query'
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Time in milliseconds that unused/inactive cache data remains in memory
-      gcTime: 1000 * 60 * 5, // 5 minutes
-      
-      // Time in milliseconds that the data is considered fresh
-      staleTime: 1000 * 60 * 1, // 1 minute
-      
-      // Retry failed requests
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors (client errors)
-        if (error?.status >= 400 && error?.status < 500) {
-          return false
-        }
-        // Retry up to 3 times for other errors
-        return failureCount < 3
-      },
-      
-      // Retry delay
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      
-      // Refetch on window focus
-      refetchOnWindowFocus: false,
-      
-      // Refetch on reconnect
-      refetchOnReconnect: true,
-      
-      // Refetch on mount
-      refetchOnMount: true,
-    },
-    mutations: {
-      // Retry failed mutations
-      retry: 1,
-      
-      // Retry delay for mutations
-      retryDelay: 1000,
-    },
+// Default options for all queries
+const defaultOptions = {
+  queries: {
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when network reconnects
+    refetchOnMount: true, // Refetch when component mounts
   },
+  mutations: {
+    retry: 1, // Retry mutations once
+  },
+}
+
+// Create the query client
+export const queryClient = new QueryClient({
+  defaultOptions,
 })
 
-// Query keys factory for consistent key management
+/**
+ * Query Keys Factory
+ * Consistent query key structure for better cache management
+ */
 export const queryKeys = {
   // Products
   products: {
@@ -50,10 +38,11 @@ export const queryKeys = {
     list: (filters) => [...queryKeys.products.lists(), { filters }],
     details: () => [...queryKeys.products.all, 'detail'],
     detail: (id) => [...queryKeys.products.details(), id],
-    search: (query) => [...queryKeys.products.all, 'search', query],
-    categories: () => [...queryKeys.products.all, 'categories'],
+    featured: () => [...queryKeys.products.all, 'featured'],
+    related: (id) => [...queryKeys.products.all, 'related', id],
+    search: (query, filters) => [...queryKeys.products.all, 'search', { query, filters }],
   },
-  
+
   // Categories
   categories: {
     all: ['categories'],
@@ -61,57 +50,77 @@ export const queryKeys = {
     list: (filters) => [...queryKeys.categories.lists(), { filters }],
     details: () => [...queryKeys.categories.all, 'detail'],
     detail: (id) => [...queryKeys.categories.details(), id],
+    products: (id, filters) => [...queryKeys.categories.all, 'products', id, { filters }],
   },
-  
-  // Orders
-  orders: {
-    all: ['orders'],
-    lists: () => [...queryKeys.orders.all, 'list'],
-    list: (filters) => [...queryKeys.orders.lists(), { filters }],
-    details: () => [...queryKeys.orders.all, 'detail'],
-    detail: (id) => [...queryKeys.orders.details(), id],
-    user: (userId) => [...queryKeys.orders.all, 'user', userId],
+
+  // Blog
+  blog: {
+    all: ['blog'],
+    lists: () => [...queryKeys.blog.all, 'list'],
+    list: (filters) => [...queryKeys.blog.lists(), { filters }],
+    details: () => [...queryKeys.blog.all, 'detail'],
+    detail: (id) => [...queryKeys.blog.details(), id],
+    featured: () => [...queryKeys.blog.all, 'featured'],
+    categories: () => [...queryKeys.blog.all, 'categories'],
+    search: (query, filters) => [...queryKeys.blog.all, 'search', { query, filters }],
   },
-  
-  // Users
-  users: {
-    all: ['users'],
-    lists: () => [...queryKeys.users.all, 'list'],
-    list: (filters) => [...queryKeys.users.lists(), { filters }],
-    details: () => [...queryKeys.users.all, 'detail'],
-    detail: (id) => [...queryKeys.users.details(), id],
-    profile: () => [...queryKeys.users.all, 'profile'],
-  },
-  
-  // Reviews
-  reviews: {
-    all: ['reviews'],
-    lists: () => [...queryKeys.reviews.all, 'list'],
-    list: (filters) => [...queryKeys.reviews.lists(), { filters }],
-    product: (productId) => [...queryKeys.reviews.all, 'product', productId],
-  },
-  
-  // Admin
-  admin: {
-    all: ['admin'],
-    dashboard: () => [...queryKeys.admin.all, 'dashboard'],
-    analytics: () => [...queryKeys.admin.all, 'analytics'],
-    sync: () => [...queryKeys.admin.all, 'sync'],
-  },
-  
-  // Care Guides
-  careGuides: {
-    all: ['care-guides'],
-    lists: () => [...queryKeys.careGuides.all, 'list'],
-    list: (filters) => [...queryKeys.careGuides.lists(), { filters }],
-    details: () => [...queryKeys.careGuides.all, 'detail'],
-    detail: (id) => [...queryKeys.careGuides.details(), id],
-  },
-  
-  // Testimonials
-  testimonials: {
-    all: ['testimonials'],
-    lists: () => [...queryKeys.testimonials.all, 'list'],
-    list: (filters) => [...queryKeys.testimonials.lists(), { filters }],
+
+  // Plant Care
+  plantCare: {
+    all: ['plantCare'],
+    lists: () => [...queryKeys.plantCare.all, 'list'],
+    list: (filters) => [...queryKeys.plantCare.lists(), { filters }],
+    details: () => [...queryKeys.plantCare.all, 'detail'],
+    detail: (id) => [...queryKeys.plantCare.details(), id],
+    search: (query) => [...queryKeys.plantCare.all, 'search', query],
   },
 }
+
+/**
+ * Cache invalidation helpers
+ * For real-time updates when admin makes changes
+ */
+export const invalidateQueries = {
+  // Invalidate all product-related queries
+  products: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.products.all })
+  },
+
+  // Invalidate specific product
+  product: (id) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.products.detail(id) })
+    queryClient.invalidateQueries({ queryKey: queryKeys.products.related(id) })
+  },
+
+  // Invalidate all category-related queries
+  categories: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
+  },
+
+  // Invalidate specific category
+  category: (id) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.categories.detail(id) })
+  },
+
+  // Invalidate all blog-related queries
+  blog: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.blog.all })
+  },
+
+  // Invalidate specific blog post
+  blogPost: (id) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.blog.detail(id) })
+  },
+
+  // Invalidate all plant care queries
+  plantCare: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.plantCare.all })
+  },
+
+  // Invalidate everything (use sparingly)
+  all: () => {
+    queryClient.invalidateQueries()
+  },
+}
+
+export default queryClient

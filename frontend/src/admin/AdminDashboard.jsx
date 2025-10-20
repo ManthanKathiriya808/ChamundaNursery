@@ -15,10 +15,12 @@ import {
   Loader2,
   MessageSquare,
   Settings,
-  Shield
+  Shield,
+  AlertCircle
 } from 'lucide-react'
 import { fetchDashboardStats } from '../services/api'
 import UserRoleManager from '../components/admin/UserRoleManager'
+import useUIStore from '../stores/uiStore'
 
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
@@ -150,6 +152,33 @@ export default function AdminDashboard() {
             >
               Loading Dashboard...
             </motion.p>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <motion.div
+            className="text-center p-8 bg-white rounded-lg shadow-lg border border-red-200"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <motion.button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              onClick={handleRefresh}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Try Again
+            </motion.button>
           </motion.div>
         </div>
       </div>
@@ -361,7 +390,7 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       <AnimatePresence>
-                        {dashboardData?.recentOrders?.map((order, index) => {
+                        {Array.isArray(dashboardData?.recentOrders) && dashboardData.recentOrders.map((order, index) => {
                           const statusColors = {
                             'completed': 'bg-green-100 text-green-800',
                             'pending': 'bg-yellow-100 text-yellow-800',

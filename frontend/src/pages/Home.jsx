@@ -20,9 +20,50 @@ import ImageCarousel from '../components/ui/ImageCarousel.jsx'
 import ProductCarousel from '../components/ProductCarousel.jsx'
 import { useData } from '../context/DataProvider.jsx'
 import { useScrollAnimation, useStaggerAnimation } from '../hooks/useScrollAnimation.js'
+import { 
+  useProducts, 
+  useFeaturedProducts, 
+  useTestimonials, 
+  useHeroSlides,
+  useApiError 
+} from '../hooks/usePublicData.js'
+import { 
+  ProductGridSkeleton, 
+  HeroSkeleton, 
+  TestimonialSkeleton,
+  ErrorState 
+} from '../components/LoadingSkeletons.jsx'
 
 export default function Home() {
-  const { heroSlides, testimonials, products } = useData()
+  // Dynamic API data hooks
+  const { 
+    data: heroSlidesData, 
+    isLoading: heroLoading, 
+    error: heroError 
+  } = useHeroSlides()
+  
+  const { 
+    data: testimonialsData, 
+    isLoading: testimonialsLoading, 
+    error: testimonialsError 
+  } = useTestimonials(6)
+  
+  const { 
+    data: featuredProductsData, 
+    isLoading: productsLoading, 
+    error: productsError 
+  } = useFeaturedProducts(8)
+
+  // Use API data directly without fallbacks to ensure dynamic content only
+  const heroSlides = heroSlidesData
+  const testimonials = testimonialsData
+  const products = featuredProductsData?.products || []
+  
+  // Error handling
+  const heroErrorInfo = useApiError(heroError)
+  const testimonialsErrorInfo = useApiError(testimonialsError)
+  const productsErrorInfo = useApiError(productsError)
+
   const carouselItems = Array.isArray(testimonials)
     ? testimonials.map((t) => ({ name: t.name, quote: t.comment || t.quote, role: t.location || t.role }))
     : undefined
@@ -47,7 +88,17 @@ export default function Home() {
       </Helmet>
 
       {/* Video/Image Hero Carousel (full-bleed, autoplay, loop) */}
-      <VideoHeroCarousel className="-mt-8" slides={heroSlides && heroSlides.length ? heroSlides : undefined} />
+      {heroLoading ? (
+        <HeroSkeleton />
+      ) : heroErrorInfo ? (
+        <ErrorState 
+          title="Unable to load hero content"
+          message={heroErrorInfo.message}
+          onRetry={() => window.location.reload()}
+        />
+      ) : (
+        <VideoHeroCarousel className="-mt-8" slides={heroSlides} />
+      )}
 
       {/* Parallax banner with CTA overlay (full-bleed, no gap below hero) */}
       <ParallaxBanner imageSrc="/img.webp">
@@ -95,7 +146,17 @@ export default function Home() {
               Discover our handpicked selection of premium plants and gardening essentials
             </p>
           </div>
-          <ProductCarousel products={products} />
+          {productsLoading ? (
+            <ProductGridSkeleton count={4} />
+          ) : productsErrorInfo ? (
+            <ErrorState 
+              title="Unable to load featured products"
+              message={productsErrorInfo.message}
+              onRetry={() => window.location.reload()}
+            />
+          ) : (
+            <ProductCarousel products={products} />
+          )}
         </div>
       </motion.section>
 
@@ -158,7 +219,27 @@ export default function Home() {
         animate={testimonialsAnimation.inView ? "visible" : "hidden"}
         className="mt-8"
       >
-        <Testimonials />
+        {testimonialsLoading ? (
+          <div className="container mx-auto px-4 py-16">
+            <div className="text-center mb-12">
+              <div className="h-8 w-64 bg-gray-200 rounded mx-auto mb-4 animate-pulse" />
+              <div className="h-4 w-96 bg-gray-200 rounded mx-auto animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <TestimonialSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        ) : testimonialsErrorInfo ? (
+          <ErrorState 
+            title="Unable to load testimonials"
+            message={testimonialsErrorInfo.message}
+            onRetry={() => window.location.reload()}
+          />
+        ) : (
+          <Testimonials />
+        )}
       </motion.section>
 
       {/* Blog Preview */}

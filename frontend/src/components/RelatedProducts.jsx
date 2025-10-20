@@ -8,85 +8,19 @@ import {
   Eye,
   ArrowRight
 } from 'lucide-react';
+import { useProducts } from '../hooks/usePublicData.js';
 
 const RelatedProducts = ({ currentProductId, category, limit = 4 }) => {
-  // Mock related products data - in a real app, this would come from an API
-  const relatedProducts = [
-    {
-      id: 1,
-      name: 'Monstera Deliciosa',
-      price: 45.99,
-      originalPrice: 55.99,
-      image: 'https://images.unsplash.com/photo-1545241047-6083a3684587?w=400',
-      rating: 4.8,
-      reviewCount: 124,
-      category: 'Indoor Plants',
-      isOnSale: true,
-      difficulty: 'Easy',
-      lightRequirement: 'Bright Indirect'
-    },
-    {
-      id: 2,
-      name: 'Snake Plant',
-      price: 32.99,
-      image: 'https://images.unsplash.com/photo-1593691509543-c55fb32d8de5?w=400',
-      rating: 4.9,
-      reviewCount: 89,
-      category: 'Indoor Plants',
-      isOnSale: false,
-      difficulty: 'Very Easy',
-      lightRequirement: 'Low Light'
-    },
-    {
-      id: 3,
-      name: 'Fiddle Leaf Fig',
-      price: 68.99,
-      image: 'https://images.unsplash.com/photo-1586093248292-4e6636b4e3b8?w=400',
-      rating: 4.6,
-      reviewCount: 156,
-      category: 'Indoor Plants',
-      isOnSale: false,
-      difficulty: 'Moderate',
-      lightRequirement: 'Bright Indirect'
-    },
-    {
-      id: 4,
-      name: 'Peace Lily',
-      price: 28.99,
-      originalPrice: 34.99,
-      image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400',
-      rating: 4.7,
-      reviewCount: 92,
-      category: 'Indoor Plants',
-      isOnSale: true,
-      difficulty: 'Easy',
-      lightRequirement: 'Medium Light'
-    },
-    {
-      id: 5,
-      name: 'Rubber Plant',
-      price: 42.99,
-      image: 'https://images.unsplash.com/photo-1509423350716-97f2360af2e4?w=400',
-      rating: 4.5,
-      reviewCount: 78,
-      category: 'Indoor Plants',
-      isOnSale: false,
-      difficulty: 'Easy',
-      lightRequirement: 'Bright Indirect'
-    },
-    {
-      id: 6,
-      name: 'ZZ Plant',
-      price: 36.99,
-      image: 'https://images.unsplash.com/photo-1632207691143-643e2a9a9361?w=400',
-      rating: 4.8,
-      reviewCount: 103,
-      category: 'Indoor Plants',
-      isOnSale: false,
-      difficulty: 'Very Easy',
-      lightRequirement: 'Low Light'
-    }
-  ].filter(product => product.id !== currentProductId).slice(0, limit);
+  // Dynamic related products data from API
+  const { data: productsData, isLoading, error } = useProducts({
+    category: category,
+    limit: limit + 1, // Get one extra to exclude current product
+  });
+
+  // Filter out current product and limit results
+  const relatedProducts = (productsData?.products || [])
+    .filter(product => product.id !== currentProductId)
+    .slice(0, limit);
 
   const renderStars = (rating) => {
     return [...Array(5)].map((_, i) => (

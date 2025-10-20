@@ -2,7 +2,11 @@
 import React, { Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { queryClient } from './lib/queryClient'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import QueryErrorBoundary from './components/QueryErrorBoundary.jsx'
 import { HelmetProvider } from 'react-helmet-async'
 import App from './App.jsx'
 import UserProvider from './hooks/UserProvider.jsx'
@@ -38,14 +42,16 @@ const Terms = React.lazy(() => import('./pages/Terms.jsx'))
 const Privacy = React.lazy(() => import('./pages/Privacy.jsx'))
 const Legal = React.lazy(() => import('./pages/Legal.jsx'))
 const Blog = React.lazy(() => import('./pages/Blog.jsx'))
+const BlogDetail = React.lazy(() => import('./pages/BlogDetail.jsx'))
 const Care = React.lazy(() => import('./pages/Care.jsx'))
+const CareDetail = React.lazy(() => import('./pages/CareDetail.jsx'))
 
 // Lazy-load admin pages and layout
 const AdminLayout = React.lazy(() => import('./admin/AdminLayout.jsx'))
 const AdminDashboard = React.lazy(() => import('./admin/AdminDashboard.jsx'))
-const AdminProducts = React.lazy(() => import('./admin/Products.jsx'))
-const AdminProductsEnhanced = React.lazy(() => import('./admin/ProductsEnhanced.jsx'))
+const AdminProductsUnified = React.lazy(() => import('./admin/ProductsUnified.jsx'))
 const AdminCategories = React.lazy(() => import('./admin/Categories.jsx'))
+const AdminBlogManagement = React.lazy(() => import('./admin/BlogManagement.jsx'))
 const AdminOrders = React.lazy(() => import('./admin/Orders.jsx'))
 const AdminUsers = React.lazy(() => import('./admin/Users.jsx'))
 const AdminReviews = React.lazy(() => import('./admin/Reviews.jsx'))
@@ -60,79 +66,86 @@ createRoot(document.getElementById('root')).render(
           <ToastProvider>
           <CartProvider>
           <DataProvider>
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <QueryClientProvider client={queryClient}>
             <ErrorBoundary>
-            {/* Loading fallback with nursery branding */}
-            <Suspense fallback={<ClerkLoadingSpinner />}>
-              <Routes>
-                {/* Main Application Routes */}
-                {/* Authentication Routes with separate layout (no navbar/footer) */}
-                <Route path="account/login/*" element={<AuthLayout />}>
-                  <Route index element={<SignInForm />} />
-                  <Route path="*" element={<SignInForm />} />
-                </Route>
-                <Route path="account/register/*" element={<AuthLayout />}>
-                  <Route index element={<SignUpForm />} />
-                  <Route path="*" element={<SignUpForm />} />
-                </Route>
+              <QueryErrorBoundary>
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  {/* Loading fallback with nursery branding */}
+                  <Suspense fallback={<ClerkLoadingSpinner />}>
+                    <Routes>
+                      {/* Main Application Routes */}
+                      {/* Authentication Routes with separate layout (no navbar/footer) */}
+                      <Route path="account/login/*" element={<AuthLayout />}>
+                        <Route index element={<SignInForm />} />
+                        <Route path="*" element={<SignInForm />} />
+                      </Route>
+                      <Route path="account/register/*" element={<AuthLayout />}>
+                        <Route index element={<SignUpForm />} />
+                        <Route path="*" element={<SignUpForm />} />
+                      </Route>
 
-                <Route path="/" element={<App />}> 
-                  {/* Public Routes */}
-                  <Route index element={<Home />} />
-                  <Route path="catalog" element={<Catalog />} />
-                  <Route path="product/:id" element={<Product />} />
-                  <Route path="about" element={<About />} />
-                  <Route path="contact" element={<Contact />} />
-                  <Route path="faq" element={<FAQ />} />
-                  <Route path="terms" element={<Terms />} />
-                  <Route path="privacy" element={<Privacy />} />
-                  <Route path="legal" element={<Legal />} />
-                  <Route path="blog" element={<Blog />} />
-                  <Route path="care" element={<Care />} />
-                  
-                  {/* Protected User Routes */}
-                  <Route path="cart" element={
-                    <UserRoute pageTitle="Shopping Cart">
-                      <Cart />
-                    </UserRoute>
-                  } />
-                  <Route path="checkout" element={
-                    <UserRoute pageTitle="Checkout">
-                      <Checkout />
-                    </UserRoute>
-                  } />
-                  <Route path="account/profile" element={
-                    <UserRoute pageTitle="Profile">
-                      <UserProfile />
-                    </UserRoute>
-                  } />
-                  <Route path="account/orders" element={
-                    <UserRoute pageTitle="Order History">
-                      <Orders />
-                    </UserRoute>
-                  } />
-                </Route>
+                      <Route path="/" element={<App />}> 
+                        {/* Public Routes */}
+                        <Route index element={<Home />} />
+                        <Route path="catalog" element={<Catalog />} />
+                        <Route path="product/:id" element={<Product />} />
+                        <Route path="about" element={<About />} />
+                        <Route path="contact" element={<Contact />} />
+                        <Route path="faq" element={<FAQ />} />
+                        <Route path="terms" element={<Terms />} />
+                        <Route path="privacy" element={<Privacy />} />
+                        <Route path="legal" element={<Legal />} />
+                        <Route path="blog" element={<Blog />} />
+                        <Route path="blog/:id" element={<BlogDetail />} />
+                        <Route path="care" element={<Care />} />
+                        <Route path="care/:id" element={<CareDetail />} />
+                        
+                        {/* Protected User Routes */}
+                        <Route path="cart" element={
+                          <UserRoute pageTitle="Shopping Cart">
+                            <Cart />
+                          </UserRoute>
+                        } />
+                        <Route path="checkout" element={
+                          <UserRoute pageTitle="Checkout">
+                            <Checkout />
+                          </UserRoute>
+                        } />
+                        <Route path="account/profile" element={
+                          <UserRoute pageTitle="Profile">
+                            <UserProfile />
+                          </UserRoute>
+                        } />
+                        <Route path="account/orders" element={
+                          <UserRoute pageTitle="Order History">
+                            <Orders />
+                          </UserRoute>
+                        } />
+                      </Route>
 
-                {/* Admin Routes */}
-                <Route path="admin" element={
-                  <AdminRoute pageTitle="Admin Dashboard">
-                    <AdminLayout />
-                  </AdminRoute>
-                }>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="products" element={<AdminProducts />} />
-                  <Route path="products-enhanced" element={<AdminProductsEnhanced />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="reviews" element={<AdminReviews />} />
-                  <Route path="bulk-upload" element={<AdminBulkUpload />} />
-                </Route>
+                      {/* Admin Routes */}
+                      <Route path="admin" element={
+                        <AdminRoute pageTitle="Admin Dashboard">
+                          <AdminLayout />
+                        </AdminRoute>
+                      }>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="products" element={<AdminProductsUnified />} />
+                        <Route path="categories" element={<AdminCategories />} />
+                        <Route path="blog" element={<AdminBlogManagement />} />
+                        <Route path="orders" element={<AdminOrders />} />
+                        <Route path="users" element={<AdminUsers />} />
+                        <Route path="reviews" element={<AdminReviews />} />
+                        <Route path="bulk-upload" element={<AdminBulkUpload />} />
+                      </Route>
 
-              </Routes>
-          </Suspense>
+                    </Routes>
+                  </Suspense>
+                </BrowserRouter>
+                <ReactQueryDevtools initialIsOpen={false} />
+              </QueryErrorBoundary>
             </ErrorBoundary>
-          </BrowserRouter>
+          </QueryClientProvider>
           </DataProvider>
           </CartProvider>
           </ToastProvider>

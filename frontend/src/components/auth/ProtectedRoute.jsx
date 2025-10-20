@@ -317,7 +317,6 @@ export const routeProtection = {
     '/admin',
     '/admin/dashboard',
     '/admin/products',
-    '/admin/products-enhanced',
     '/admin/orders',
     '/admin/users',
     '/admin/analytics',
