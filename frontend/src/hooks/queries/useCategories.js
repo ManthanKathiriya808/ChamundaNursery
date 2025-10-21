@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryClient'
 import useUIStore from '../../stores/uiStore'
+import { useAuth } from '@clerk/clerk-react'
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 // API functions
-const categoryAPI = {
+const createCategoryAPI = (getToken) => ({
   getAll: async (filters = {}) => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
@@ -15,7 +16,7 @@ const categoryAPI = {
     })
     
     // Use public endpoint for categories (admin endpoint requires auth)
-    const response = await fetch(`${API_BASE}/categories?${params}`, {
+    const response = await fetch(`${API_BASE}/api/categories?${params}`, {
       headers: {
         'Content-Type': 'application/json'
       }
@@ -46,7 +47,7 @@ const categoryAPI = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE}/categories/${id}`)
+    const response = await fetch(`${API_BASE}/api/categories/${id}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch category: ${response.statusText}`)
     }
@@ -74,7 +75,7 @@ const categoryAPI = {
     const transformedData = {
       ...categoryData,
       slug,
-      parent_id: categoryData.parentId || null,
+      parent_id: categoryData.parentId && categoryData.parentId !== '' ? parseInt(categoryData.parentId) : null,
       status: categoryData.isActive ? 'active' : 'inactive',
       sort_order: categoryData.sortOrder || 0,
       meta_title: categoryData.seoTitle || null,
@@ -89,11 +90,12 @@ const categoryAPI = {
     delete transformedData.seoDescription
     delete transformedData.seoKeywords
     
-    const response = await fetch(`${API_BASE}/admin/categories`, {
+    const token = await getToken()
+    const response = await fetch(`${API_BASE}/api/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(transformedData),
     })
@@ -107,7 +109,7 @@ const categoryAPI = {
     // Transform frontend field names to backend field names
     const transformedData = {
       ...categoryData,
-      parent_id: categoryData.parentId || null,
+      parent_id: categoryData.parentId && categoryData.parentId !== '' ? parseInt(categoryData.parentId) : null,
       status: categoryData.isActive ? 'active' : 'inactive',
       sort_order: categoryData.sortOrder || 0,
       meta_title: categoryData.seoTitle || null,
@@ -122,11 +124,12 @@ const categoryAPI = {
     delete transformedData.seoDescription
     delete transformedData.seoKeywords
     
-    const response = await fetch(`${API_BASE}/admin/categories/${id}`, {
+    const token = await getToken()
+    const response = await fetch(`${API_BASE}/api/categories/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(transformedData),
     })
@@ -137,10 +140,11 @@ const categoryAPI = {
   },
 
   delete: async (id) => {
-    const response = await fetch(`${API_BASE}/admin/categories/${id}`, {
+    const token = await getToken()
+    const response = await fetch(`${API_BASE}/api/categories/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        'Authorization': `Bearer ${token}`,
       },
     })
     if (!response.ok) {
@@ -148,27 +152,44 @@ const categoryAPI = {
     }
     return { success: true }
   },
-}
+})
 
 // Query hooks
 export const useCategories = (filters = {}) => {
+  const { showInactive = false, ...otherFilters } = filters;
+  
   return useQuery({
-    queryKey: queryKeys.categories.list(filters),
-    queryFn: () => categoryAPI.getAll(filters),
+    queryKey: ['categories', filters],
+    queryFn: async () => {
+      const filterParams = {};
+      
+      // Handle status filtering
+      if (showInactive) {
+        // Don't set status parameter to get all categories
+      } else {
+        filterParams.status = 'active';
+      }
+      
+      // Add other filters
+      Object.entries(otherFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          filterParams[key] = value;
+        }
+      });
+      
+      // Use the createCategoryAPI function which returns the transformed data directly
+      const categoryAPI = createCategoryAPI(() => Promise.resolve(null));
+      const categories = await categoryAPI.getAll(filterParams);
+      return categories;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false,
-    retry: 2,
-    onError: (error) => {
-      console.error('Failed to fetch categories:', error)
-    }
-  })
+  });
 }
 
 export const useCategory = (id) => {
   return useQuery({
     queryKey: queryKeys.categories.detail(id),
-    queryFn: () => categoryAPI.getById(id),
+    queryFn: () => createCategoryAPI(() => Promise.resolve(null)).getById(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5, // 5 minutes
     onError: (error) => {
@@ -179,11 +200,12 @@ export const useCategory = (id) => {
 
 // Mutation hooks
 export const useCreateCategory = () => {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
 
   return useMutation({
-    mutationFn: categoryAPI.create,
+    mutationFn: (categoryData) => createCategoryAPI(getToken).create(categoryData),
     onSuccess: (newCategory) => {
       // Invalidate and refetch categories list
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.lists() })
@@ -203,11 +225,12 @@ export const useCreateCategory = () => {
 }
 
 export const useUpdateCategory = () => {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
 
   return useMutation({
-    mutationFn: categoryAPI.update,
+    mutationFn: (categoryData) => createCategoryAPI(getToken).update(categoryData),
     onSuccess: (response) => {
       // Transform the backend response to frontend format
       const updatedCategory = response.data || response
@@ -238,11 +261,12 @@ export const useUpdateCategory = () => {
 }
 
 export const useDeleteCategory = () => {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
 
   return useMutation({
-    mutationFn: categoryAPI.delete,
+    mutationFn: (id) => createCategoryAPI(getToken).delete(id),
     onSuccess: (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: queryKeys.categories.detail(deletedId) })

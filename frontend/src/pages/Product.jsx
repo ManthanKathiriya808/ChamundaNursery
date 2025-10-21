@@ -95,7 +95,19 @@ export default function Product() {
     
     // Add all images from the images array
     if (Array.isArray(item.images) && item.images.length > 0) {
-      imageList.push(...item.images)
+      // Handle image objects from API
+      item.images.forEach(imageObj => {
+        if (typeof imageObj === 'string') {
+          // If it's already a string URL
+          imageList.push(imageObj)
+        } else if (imageObj && typeof imageObj === 'object') {
+          // If it's an object with image properties
+          const imageUrl = imageObj.full_url || imageObj.image_url || imageObj.url
+          if (imageUrl) {
+            imageList.push(imageUrl)
+          }
+        }
+      })
     } else if (item.image) {
       // Fallback to single image
       imageList.push(item.image)

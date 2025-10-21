@@ -24,10 +24,10 @@ import {
   ShoppingCart, BarChart3, TrendingUp, Calendar,
   FileText, Globe, Palette, Ruler, Droplets, Sun
 } from 'lucide-react'
-import { toast } from 'react-hot-toast'
 import { useProducts, useAdminProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '../hooks/queries/useProducts'
 import { useCategories } from '../hooks/queries/useCategories'
 import { useImageUpload } from "../hooks/queries/useImageUpload";
+import { mediaAPI } from '../services/publicAPI'
 import useUIStore from '../stores/uiStore'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { ImageUploadSection } from './components/ImageUploadSection'
@@ -554,10 +554,13 @@ export default function AdminProductsUnified() {
   })
 
   const { data: categoriesData } = useCategories()
+  
+  // Get UI store methods for notifications
+  const { showSuccess, showError } = useUIStore()
 
   const createProductMutation = useCreateProduct({
     onSuccess: () => {
-      toast.success('Product created successfully!')
+      showSuccess('Product created successfully!')
       setShowForm(false)
       setEditingProduct(null)
       form.reset()
@@ -566,13 +569,13 @@ export default function AdminProductsUnified() {
       refetch()
     },
     onError: (error) => {
-      toast.error(`Failed to create product: ${error.message}`)
+      showError(`Failed to create product: ${error.message}`)
     }
   })
 
   const updateProductMutation = useUpdateProduct({
     onSuccess: () => {
-      toast.success('Product updated successfully!')
+      showSuccess('Product updated successfully!')
       setShowForm(false)
       setEditingProduct(null)
       form.reset()
@@ -581,80 +584,217 @@ export default function AdminProductsUnified() {
       refetch()
     },
     onError: (error) => {
-      toast.error(`Failed to update product: ${error.message}`)
+      showError(`Failed to update product: ${error.message}`)
     }
   })
 
   const deleteProductMutation = useDeleteProduct({
     onSuccess: () => {
-      toast.success('Product deleted successfully!')
+      showSuccess('Product deleted successfully!')
       // Force refetch to ensure UI updates immediately
       refetch()
     },
     onError: (error) => {
-      toast.error(`Failed to delete product: ${error.message}`)
+      showError(`Failed to delete product: ${error.message}`)
     }
   })
 
   // Extract data
   const products = productsData?.products || []
   const categories = categoriesData || []
+  
+  // Debug logging
+  console.log('ProductsUnified - productsData:', productsData)
+  console.log('ProductsUnified - products:', products)
+  console.log('ProductsUnified - first product:', products[0])
+  console.log('ProductsUnified - first product images:', products[0]?.images)
 
   // Form submission handler
   const handleFormSubmit = async (formData) => {
+    console.log('=== FORM SUBMISSION START ===')
+    console.log('Form data received:', formData)
+    console.log('Editing product:', editingProduct)
+    console.log('Image upload state:', {
+      images: imageUpload.images,
+      isUploading: imageUpload.isUploading,
+      previews: imageUpload.previews
+    })
+    
     try {
       // Validate required fields before submission
       if (!formData.name || !formData.slug || !formData.price) {
-        toast.error('Please fill in all required fields: Name, Slug, and Price')
+        console.log('Validation failed: Missing required fields')
+        showError('Please fill in all required fields: Name, Slug, and Price')
         return
       }
 
       // Validate price is a valid number
       const priceValue = parseFloat(formData.price)
       if (isNaN(priceValue) || priceValue <= 0) {
-        toast.error('Please enter a valid price greater than 0')
+        console.log('Validation failed: Invalid price')
+        showError('Please enter a valid price greater than 0')
         return
       }
 
       // Validate stock is a valid number
       const stockValue = parseInt(formData.stock)
       if (isNaN(stockValue) || stockValue < 0) {
-        toast.error('Please enter a valid stock quantity (0 or greater)')
+        console.log('Validation failed: Invalid stock')
+        showError('Please enter a valid stock quantity (0 or greater)')
         return
       }
 
       // Validate category selection
       if (!formData.categoryIds || formData.categoryIds.length === 0) {
-        toast.error('Please select at least one category')
+        console.log('Validation failed: No categories selected')
+        showError('Please select at least one category')
         return
       }
 
-      // Include uploaded images in form data
+      console.log('All validations passed')
+
+      // Generate UUID for new products (client-side UUID generation)
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0
+          const v = c == 'x' ? r : (r & 0x3 | 0x8)
+          return v.toString(16)
+        })
+      }
+
+      // Include uploaded images in form data and prepare for array-based storage
       const submissionData = {
         ...formData,
-        images: imageUpload.images
+        // Generate UUID for new products
+        uuid_id: editingProduct?.uuid_id || generateUUID(),
+        // Ensure categoryIds is an array of integers
+        categoryIds: Array.isArray(formData.categoryIds) 
+          ? formData.categoryIds.map(id => parseInt(id)) 
+          : [parseInt(formData.categoryIds)],
+        // Include images as array
+        images: imageUpload.images,
+        // Map frontend field names to backend expectations
+        inventory: formData.stock,
+        compare_price: formData.salePrice,
+        short_description: formData.shortDescription,
+        meta_title: formData.metaTitle,
+        meta_description: formData.metaDescription,
+        care_instructions: formData.careInstructions,
+        plant_type: formData.plantType,
+        light_requirement: formData.lightRequirement || formData.sunlightRequirement,
+        watering_frequency: formData.wateringFrequency || formData.waterRequirement,
+        botanical_name: formData.botanicalName,
+        blooming_season: formData.bloomingSeason,
+        low_stock_threshold: formData.lowStockThreshold || 5,
+        // Convert dimensions to object if provided
+        dimensions: (formData.height || formData.width || formData.length) ? {
+          height: formData.height ? parseFloat(formData.height) : null,
+          width: formData.width ? parseFloat(formData.width) : null,
+          length: formData.length ? parseFloat(formData.length) : null
+        } : null
       }
       
+      console.log('Submitting product data:', submissionData)
+      console.log('About to call mutation...')
+      
       if (editingProduct) {
+        console.log('Calling updateProductMutation...')
         await updateProductMutation.mutateAsync({
           id: editingProduct.id,
           ...submissionData
         })
       } else {
+        console.log('Calling createProductMutation...')
         await createProductMutation.mutateAsync(submissionData)
       }
       
+      console.log('Mutation completed successfully')
+      
     } catch (error) {
-      console.error('Form submission error:', error)
+      console.error('=== FORM SUBMISSION ERROR ===')
+      console.error('Error details:', error)
+      console.error('Error message:', error.message)
+      console.error('Error response:', error.response)
+      
       const errorMessage = error.response?.data?.error?.message || error.message || 'An unexpected error occurred'
-      toast.error(`Failed to ${editingProduct ? 'update' : 'create'} product: ${errorMessage}`)
+      showError(`Failed to ${editingProduct ? 'update' : 'create'} product: ${errorMessage}`)
     }
+    
+    console.log('=== FORM SUBMISSION END ===')
   }
 
   // Edit product handler
   const handleEditProduct = (product) => {
     setEditingProduct(product)
-    form.reset(product)
+    
+    // Prepare form data with proper field mapping and array handling
+    const formData = {
+      ...product,
+      // Map backend fields to frontend form fields
+      stock: product.inventory?.toString() || product.stock?.toString() || '0',
+      salePrice: product.compare_price?.toString() || product.salePrice?.toString() || '',
+      shortDescription: product.short_description || product.shortDescription || '',
+      metaTitle: product.meta_title || product.metaTitle || '',
+      metaDescription: product.meta_description || product.metaDescription || '',
+      careInstructions: product.care_instructions || product.careInstructions || '',
+      plantType: product.plant_type || product.plantType || '',
+      lightRequirement: product.light_requirement || product.lightRequirement || product.sunlightRequirement || '',
+      wateringFrequency: product.watering_frequency || product.wateringFrequency || product.waterRequirement || '',
+      botanicalName: product.botanical_name || product.botanicalName || '',
+      bloomingSeason: product.blooming_season || product.bloomingSeason || '',
+      lowStockThreshold: product.low_stock_threshold?.toString() || product.lowStockThreshold?.toString() || '5',
+      
+      // Handle category IDs - prioritize array format
+      categoryIds: product.category_ids && Array.isArray(product.category_ids) 
+        ? product.category_ids 
+        : product.categoryIds && Array.isArray(product.categoryIds)
+        ? product.categoryIds
+        : product.category_id 
+        ? [product.category_id]
+        : [],
+      
+      // Handle dimensions object
+      height: product.dimensions?.height?.toString() || product.height?.toString() || '',
+      width: product.dimensions?.width?.toString() || product.width?.toString() || '',
+      length: product.dimensions?.length?.toString() || product.length?.toString() || '',
+      
+      // Handle price fields
+      price: product.price?.toString() || '0',
+      
+      // Handle other fields
+      weight: product.weight?.toString() || '',
+      sku: product.sku || '',
+      tags: product.tags || '',
+      subCategory: product.subCategory || '',
+      metaKeywords: product.metaKeywords || '',
+      
+      // Handle boolean fields
+      status: product.status || 'active',
+      featured: Boolean(product.featured),
+      isNew: Boolean(product.isNew),
+      isBestseller: Boolean(product.isBestseller),
+      
+      // Handle images - prioritize array format
+      images: product.image_urls && Array.isArray(product.image_urls)
+        ? product.image_urls.map(url => ({ url, preview: url }))
+        : product.images && Array.isArray(product.images)
+        ? product.images
+        : product.image
+        ? [{ url: product.image, preview: product.image }]
+        : []
+    }
+    
+    console.log('Editing product with form data:', formData)
+    form.reset(formData)
+    
+    // Set images for the image upload component
+    if (formData.images && formData.images.length > 0) {
+      setImageUpload(prev => ({
+        ...prev,
+        images: formData.images
+      }))
+    }
+    
     setShowForm(true)
   }
 
@@ -922,6 +1062,9 @@ export default function AdminProductsUnified() {
                   Product
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  UUID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -951,10 +1094,19 @@ export default function AdminProductsUnified() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-12 w-12">
-                          {product.image || product.images?.[0]?.image_url || product.images?.[0]?.url ? (
+                          {/* Prioritize image_urls array, then fallback to legacy image field */}
+                          {(product.image_urls && Array.isArray(product.image_urls) && product.image_urls.length > 0) ||
+                           (product.images && Array.isArray(product.images) && product.images.length > 0) ||
+                           product.image ? (
                             <img
                               className="h-12 w-12 rounded-lg object-cover"
-                              src={product.image || product.images[0].image_url || product.images[0].url}
+                              src={
+                                (product.image_urls && Array.isArray(product.image_urls) && product.image_urls.length > 0) 
+                                  ? mediaAPI.getImageUrl(product.image_urls[0])
+                                  : (product.images && Array.isArray(product.images) && product.images.length > 0)
+                                    ? mediaAPI.getImageUrl(product.images[0]?.full_url || product.images[0]?.image_url || product.images[0]?.url)
+                                    : mediaAPI.getImageUrl(product.image)
+                              }
                               alt={product.name}
                               onError={(e) => {
                                 e.target.style.display = 'none'
@@ -962,7 +1114,14 @@ export default function AdminProductsUnified() {
                               }}
                             />
                           ) : null}
-                          <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center" style={{ display: product.image || product.images?.[0]?.image_url || product.images?.[0]?.url ? 'none' : 'flex' }}>
+                          <div 
+                            className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center" 
+                            style={{ 
+                              display: (product.image_urls && Array.isArray(product.image_urls) && product.image_urls.length > 0) ||
+                                      (product.images && Array.isArray(product.images) && product.images.length > 0) ||
+                                      product.image ? 'none' : 'flex' 
+                            }}
+                          >
                             <ImageIcon className="w-6 h-6 text-gray-400" />
                           </div>
                         </div>
@@ -978,8 +1137,43 @@ export default function AdminProductsUnified() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {product.Category?.name || 'Uncategorized'}
+                      <div className="text-xs font-mono text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                        {product.uuid_id || product.uuid || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1">
+                        {/* Display categories from category_ids array or fallback to legacy Category */}
+                        {product.category_ids && Array.isArray(product.category_ids) && product.category_ids.length > 0 ? (
+                          product.category_ids.map((categoryId) => {
+                            const category = categories?.find(cat => cat.id === categoryId)
+                            return (
+                              <span 
+                                key={categoryId} 
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {category?.name || `Category ${categoryId}`}
+                              </span>
+                            )
+                          })
+                        ) : product.Categories && Array.isArray(product.Categories) && product.Categories.length > 0 ? (
+                          product.Categories.map((category) => (
+                            <span 
+                              key={category.id} 
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {category.name}
+                            </span>
+                          ))
+                        ) : product.Category?.name ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {product.Category.name}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Uncategorized
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

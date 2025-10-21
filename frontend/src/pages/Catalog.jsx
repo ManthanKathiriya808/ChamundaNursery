@@ -257,13 +257,8 @@ export default function Catalog() {
               {products.map((item) => (
                 <ProductCard 
                   key={item.id || item._id} 
-                  id={item.id || item._id} 
-                  name={item.name} 
-                  price={item.price} 
-                  image={item.image || item.images?.[0]} 
+                  product={item}
                   tag={activeCategory ? activeCategory[0].toUpperCase() + activeCategory.slice(1) : undefined}
-                  inStock={item.inStock}
-                  discount={item.discount}
                 />
               ))}
             </ScrollReveal>

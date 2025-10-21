@@ -11,108 +11,97 @@ import { toast } from 'react-hot-toast'
 import { 
   Users, Shield, Crown, User, Mail, Calendar, 
   ChevronDown, ChevronUp, Search, Filter, 
-  AlertCircle, CheckCircle, Settings, Info
+  AlertCircle, CheckCircle, Settings, Info,
+  UserX, UserCheck, Trash2, Plus
 } from 'lucide-react'
-import { updateUserRole, isAdmin, getUserRole, ADMIN_SETUP_INSTRUCTIONS } from '../../utils/clerkAdmin'
+import { 
+  useUsers, 
+  useUpdateUserRole, 
+  useToggleUserStatus, 
+  useSoftDeleteUser, 
+  useReactivateUser, 
+  useDeleteUser,
+  useCreateUser 
+} from '../../hooks/queries/useUsers'
+import { ADMIN_SETUP_INSTRUCTIONS } from '../../utils/clerkAdmin'
 
 export default function UserRoleManager() {
   const { user: currentUser } = useUser()
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [showInstructions, setShowInstructions] = useState(false)
-  const [updatingRoles, setUpdatingRoles] = useState(new Set())
 
-  // Mock users data - in real app, this would come from your backend
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Mock data - replace with actual API call
-        const mockUsers = [
-          {
-            id: 'user_1',
-            name: 'John Doe',
-            email: 'john@example.com',
-            role: 'customer',
-            createdAt: '2024-01-15',
-            lastSignIn: '2024-12-18'
-          },
-          {
-            id: 'user_2',
-            name: 'Jane Smith',
-            email: 'jane@example.com',
-            role: 'admin',
-            createdAt: '2024-01-10',
-            lastSignIn: '2024-12-18'
-          },
-          {
-            id: 'user_3',
-            name: 'Bob Johnson',
-            email: 'bob@example.com',
-            role: 'customer',
-            createdAt: '2024-02-01',
-            lastSignIn: '2024-12-17'
-          }
-        ]
-        
-        setUsers(mockUsers)
-      } catch (error) {
-        console.error('Failed to fetch users:', error)
-        toast.error('Failed to load users')
-      } finally {
-        setLoading(false)
-      }
-    }
+  // API hooks
+  const { data: usersData, isLoading, error } = useUsers({ 
+    role: roleFilter !== 'all' ? roleFilter : undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined 
+  })
+  const updateRoleMutation = useUpdateUserRole()
+  const toggleStatusMutation = useToggleUserStatus()
+  const softDeleteMutation = useSoftDeleteUser()
+  const reactivateMutation = useReactivateUser()
+  const hardDeleteMutation = useDeleteUser()
 
-    fetchUsers()
-  }, [])
+  const users = usersData?.users || []
+
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !searchTerm || 
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && user.is_active) ||
+      (statusFilter === 'inactive' && !user.is_active)
+    
+    return matchesSearch && matchesRole && matchesStatus
+  })
 
   const handleRoleUpdate = async (userId, newRole) => {
-    if (!currentUser) return
-
-    setUpdatingRoles(prev => new Set([...prev, userId]))
-
     try {
-      // In a real app, you'd need to use Clerk's backend API or admin functions
-      // For now, we'll show instructions to the user
-      if (newRole === 'admin') {
-        toast.success(
-          'To promote this user to admin, please follow the instructions in Clerk Dashboard',
-          { duration: 5000 }
-        )
-        setShowInstructions(true)
-      } else {
-        toast.success('Role update instructions shown. Please use Clerk Dashboard.')
-        setShowInstructions(true)
-      }
-
-      // Update local state optimistically
-      setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, role: newRole } : user
-      ))
-
+      await updateRoleMutation.mutateAsync({ id: userId, role: newRole })
     } catch (error) {
-      console.error('Failed to update role:', error)
-      toast.error('Failed to update user role')
-    } finally {
-      setUpdatingRoles(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(userId)
-        return newSet
-      })
+      console.error('Failed to update user role:', error)
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter
-    return matchesSearch && matchesRole
-  })
+  const handleToggleStatus = async (userId, currentStatus) => {
+    try {
+      await toggleStatusMutation.mutateAsync({ id: userId, isActive: !currentStatus })
+    } catch (error) {
+      console.error('Failed to toggle user status:', error)
+    }
+  }
+
+  const handleSoftDelete = async (userId) => {
+    if (window.confirm('Are you sure you want to deactivate this user?')) {
+      try {
+        await softDeleteMutation.mutateAsync(userId)
+      } catch (error) {
+        console.error('Failed to deactivate user:', error)
+      }
+    }
+  }
+
+  const handleReactivate = async (userId) => {
+    try {
+      await reactivateMutation.mutateAsync(userId)
+    } catch (error) {
+      console.error('Failed to reactivate user:', error)
+    }
+  }
+
+  const handleHardDelete = async (userId) => {
+    if (window.confirm('Are you sure you want to permanently delete this user? This action cannot be undone.')) {
+      try {
+        await hardDeleteMutation.mutateAsync(userId)
+      } catch (error) {
+        console.error('Failed to delete user:', error)
+      }
+    }
+  }
 
   const getRoleIcon = (role) => {
     switch (role) {
@@ -126,22 +115,37 @@ export default function UserRoleManager() {
   }
 
   const getRoleBadge = (role) => {
-    const baseClasses = "px-2 py-1 rounded-full text-xs font-medium"
     switch (role) {
       case 'admin':
-        return `${baseClasses} bg-yellow-100 text-yellow-800`
+        return 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
       case 'customer':
-        return `${baseClasses} bg-blue-100 text-blue-800`
+        return 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'
       default:
-        return `${baseClasses} bg-gray-100 text-gray-800`
+        return 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800'
     }
   }
 
-  if (loading) {
+  const getStatusBadge = (isActive) => {
+    return isActive 
+      ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'
+      : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800'
+  }
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-        <span className="ml-2 text-gray-600">Loading users...</span>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+          <span className="text-red-700">Failed to load users: {error.message}</span>
+        </div>
       </div>
     )
   }
@@ -149,18 +153,44 @@ export default function UserRoleManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Users className="w-6 h-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900">User Role Management</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+          <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
         </div>
-        <button
-          onClick={() => setShowInstructions(!showInstructions)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-        >
-          <Info className="w-4 h-4" />
-          <span>Setup Instructions</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <div className="bg-white px-3 py-2 rounded-lg border border-gray-200">
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-gray-600">Total Users</span>
+                <span className="font-semibold text-gray-900">{users.length}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-gray-600">Active Users</span>
+                <span className="font-semibold text-gray-900">{users.filter(u => u.is_active).length}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span className="text-gray-600">Admins</span>
+                <span className="font-semibold text-gray-900">{users.filter(u => u.role === 'admin').length}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span className="text-gray-600">Inactive</span>
+                <span className="font-semibold text-gray-900">{users.filter(u => !u.is_active).length}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          >
+            <Info className="w-4 h-4" />
+            <span>Setup Instructions</span>
+          </button>
+        </div>
       </div>
 
       {/* Instructions Panel */}
@@ -195,7 +225,7 @@ export default function UserRoleManager() {
       </AnimatePresence>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
@@ -218,6 +248,18 @@ export default function UserRoleManager() {
             <option value="customer">Customers</option>
           </select>
         </div>
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -233,10 +275,10 @@ export default function UserRoleManager() {
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Joined
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Sign In
+                  Joined
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -256,52 +298,89 @@ export default function UserRoleManager() {
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
                         <div className="text-sm text-gray-500">{user.email}</div>
+                        {user.clerk_id && (
+                          <div className="text-xs text-gray-400">Clerk ID: {user.clerk_id.substring(0, 8)}...</div>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       {getRoleIcon(user.role)}
-                      <span className={getRoleBadge(user.role)}>
-                        {user.role}
-                      </span>
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleRoleUpdate(user.id, e.target.value)}
+                        disabled={updateRoleMutation.isPending}
+                        className="text-xs font-medium border border-gray-300 rounded-md px-2 py-1 bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="customer">Customer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      {updateRoleMutation.isPending && (
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
+                      )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={getStatusBadge(user.is_active)}>
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.lastSignIn).toLocaleDateString()}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    }) : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      {user.role === 'customer' ? (
+                      {/* Status Toggle */}
+                      {user.is_active ? (
                         <button
-                          onClick={() => handleRoleUpdate(user.id, 'admin')}
-                          disabled={updatingRoles.has(user.id)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                          onClick={() => handleSoftDelete(user.id)}
+                          disabled={softDeleteMutation.isPending}
+                          className="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                         >
-                          {updatingRoles.has(user.id) ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                          {softDeleteMutation.isPending ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
                           ) : (
-                            <Crown className="w-3 h-3 mr-1" />
+                            <UserX className="w-3 h-3 mr-1" />
                           )}
-                          Make Admin
+                          Deactivate
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleRoleUpdate(user.id, 'customer')}
-                          disabled={updatingRoles.has(user.id)}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                          onClick={() => handleReactivate(user.id)}
+                          disabled={reactivateMutation.isPending}
+                          className="inline-flex items-center px-3 py-1 border border-green-300 text-xs font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                         >
-                          {updatingRoles.has(user.id) ? (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600 mr-1"></div>
+                          {reactivateMutation.isPending ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600 mr-1"></div>
                           ) : (
-                            <User className="w-3 h-3 mr-1" />
+                            <UserCheck className="w-3 h-3 mr-1" />
                           )}
-                          Remove Admin
+                          Reactivate
                         </button>
                       )}
+
+                      {/* Hard Delete with confirmation */}
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to permanently delete ${user.name}? This action cannot be undone.`)) {
+                            handleHardDelete(user.id)
+                          }
+                        }}
+                        disabled={hardDeleteMutation.isPending}
+                        className="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                      >
+                        {hardDeleteMutation.isPending ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600 mr-1"></div>
+                        ) : (
+                          <Trash2 className="w-3 h-3 mr-1" />
+                        )}
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -315,7 +394,7 @@ export default function UserRoleManager() {
             <Users className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
             <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || roleFilter !== 'all' 
+              {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : 'No users have been created yet.'
               }

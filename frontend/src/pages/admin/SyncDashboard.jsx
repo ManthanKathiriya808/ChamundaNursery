@@ -26,8 +26,9 @@ import {
   Calendar,
   Activity
 } from 'lucide-react'
-import { useProducts } from '../../hooks/queries/useProducts'
+import { useAdminProducts } from '../../hooks/queries/useProducts'
 import { useOrders } from '../../hooks/queries/useOrders'
+import { useDashboardAnalytics } from '../../hooks/queries/useAnalytics'
 import { useUIStore } from '../../stores/uiStore'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { NotificationSystem } from '../../components/NotificationSystem'
@@ -37,8 +38,9 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [dateRange, setDateRange] = useState('7d')
   
-  const { data: products, isLoading: productsLoading } = useProducts()
+  const { data: productsData, isLoading: productsLoading } = useAdminProducts()
   const { data: orders, isLoading: ordersLoading } = useOrders()
+  const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useDashboardAnalytics()
   const { showNotification } = useUIStore()
 
   // Show loading while Clerk loads
@@ -53,18 +55,46 @@ export default function AdminDashboard() {
     return <Navigate to="/" replace />
   }
 
-  // Mock analytics data - in real app, this would come from React Query
+  // Show loading while analytics data is being fetched
+  if (analyticsLoading) {
+    return <LoadingSpinner size="large" text="Loading Dashboard..." />
+  }
+
+  // Show error if analytics failed to load
+  if (analyticsError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+          <p className="text-gray-600 mb-4">{analyticsError.message}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Extract data from API response
+  const products = productsData?.products || []
+  const summary = analyticsData?.summary || {}
+  const recentOrders = analyticsData?.recentOrders || []
+
+  // Build analytics object from API data
   const analytics = {
-    totalRevenue: 45230,
-    totalOrders: 156,
-    totalProducts: products?.length || 0,
-    totalUsers: 1247,
-    revenueGrowth: 12.5,
+    totalRevenue: summary.totalSales || 0,
+    totalOrders: summary.orders || 0,
+    totalProducts: summary.products || 0,
+    totalUsers: summary.users || 0,
+    revenueGrowth: 12.5, // This would come from API in real implementation
     ordersGrowth: 8.3,
     productsGrowth: 5.2,
     usersGrowth: 15.7,
-    recentOrders: orders?.slice(0, 5) || [],
-    topProducts: products?.slice(0, 5) || [],
+    recentOrders: recentOrders.slice(0, 5),
+    topProducts: products.slice(0, 5),
     salesData: [
       { name: 'Mon', sales: 4000 },
       { name: 'Tue', sales: 3000 },

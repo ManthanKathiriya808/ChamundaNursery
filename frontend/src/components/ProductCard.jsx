@@ -5,9 +5,32 @@ import { Link } from 'react-router-dom'
 import { StarIcon } from '@heroicons/react/24/solid'
 import ImageLazy from './ImageLazy.jsx'
 
-export default function ProductCard({ id, name, price, image = '/logo.png', tag, rating = 4.5 }) {
-  const productId = id
-  const stars = Math.round(rating)
+export default function ProductCard({ id, name, price, image = '/logo.png', tag, rating = 4.5, product }) {
+  // Handle both individual props and product object
+  const productData = product || { id, name, price, image, tag, rating }
+  const productId = productData.id
+  const stars = Math.round(productData.rating || 4.5)
+  
+  // Extract image URL from product data, prioritizing full_url from API
+  const getImageUrl = () => {
+    if (productData.image) {
+      // If image is a string URL, use it directly
+      if (typeof productData.image === 'string') {
+        return productData.image
+      }
+    }
+    
+    // If product has images array from API
+    if (productData.images && productData.images.length > 0) {
+      const firstImage = productData.images[0]
+      return firstImage.full_url || firstImage.image_url || firstImage.url || '/logo.png'
+    }
+    
+    // Fallback to individual image prop or default
+    return image || '/logo.png'
+  }
+  
+  const imageUrl = getImageUrl()
   return (
     <Link to={`/product/${productId}`} className="group block">
       <motion.div
@@ -18,15 +41,15 @@ export default function ProductCard({ id, name, price, image = '/logo.png', tag,
         className="surface surface-hover p-3"
       >
       <div className="relative overflow-hidden rounded-md">
-        <ImageLazy src={image} alt={name} className="h-40 md:h-44 w-full object-cover rounded-md bg-neutral-100 transition-transform duration-300 ease-soft group-hover:scale-105" />
-        {tag && (
-          <span className="absolute top-2 left-2 badge badge-primary">{tag}</span>
+        <ImageLazy src={imageUrl} alt={productData.name} className="h-40 md:h-44 w-full object-cover rounded-md bg-neutral-100 transition-transform duration-300 ease-soft group-hover:scale-105" />
+        {productData.tag && (
+          <span className="absolute top-2 left-2 badge badge-primary">{productData.tag}</span>
         )}
       </div>
-      <div className="mt-2 font-display text-xl md:text-2xl font-semibold line-clamp-1">{name}</div>
+      <div className="mt-2 font-display text-xl md:text-2xl font-semibold line-clamp-1">{productData.name}</div>
       <div className="flex items-center justify-between mt-1">
-        <div className="text-base md:text-lg text-primary font-semibold">₹{price}</div>
-        <div className="flex items-center gap-1" aria-label={`Rating ${rating} out of 5`}>
+        <div className="text-base md:text-lg text-primary font-semibold">₹{productData.price}</div>
+        <div className="flex items-center gap-1" aria-label={`Rating ${productData.rating || 4.5} out of 5`}>
           {Array.from({ length: 5 }).map((_, i) => (
             <StarIcon key={i} className={`h-4 w-4 ${i < stars ? 'text-primaryLight' : 'text-neutral-300'}`} />
           ))}

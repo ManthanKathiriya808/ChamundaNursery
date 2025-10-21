@@ -2,6 +2,7 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import AdminSidebar from './AdminSidebar.jsx'
+import NotificationSystem from '../components/NotificationSystem.jsx'
 
 export default function AdminLayout() {
   return (
@@ -10,6 +11,7 @@ export default function AdminLayout() {
         <AdminSidebar />
       </aside>
       <main role="main" className="p-4 sm:p-6 lg:p-8">
+        <NotificationSystem />
         <Outlet />
       </main>
     </div>

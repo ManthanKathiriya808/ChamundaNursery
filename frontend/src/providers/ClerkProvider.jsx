@@ -15,7 +15,6 @@
 import React from 'react'
 import { ClerkProvider as BaseClerkProvider } from '@clerk/clerk-react'
 import { Leaf } from 'lucide-react'
-import DemoAuthProvider from './DemoAuthProvider'
 
 // Get the publishable key from environment variables
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -23,9 +22,6 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Clerk Publishable Key")
 }
-
-// Development mode check - allow demo without real Clerk key
-const isDevelopmentDemo = PUBLISHABLE_KEY === 'pk_test_your_publishable_key_here'
 
 /**
  * Custom theme configuration for Clerk components
@@ -197,46 +193,18 @@ const clerkTheme = {
 }
 
 /**
- * ClerkProvider wrapper with development demo mode
- * 
- * In development mode without valid Clerk keys, this component
- * falls back to a demo authentication provider for testing.
+ * ClerkProvider wrapper with ChamundaNursery theme
  * 
  * @param {Object} props - Component props
  * @param {React.ReactNode} props.children - Child components to wrap
- * @returns {React.ReactElement} Themed Clerk provider or demo provider
+ * @returns {React.ReactElement} Themed Clerk provider
  */
 export default function ClerkProvider({ children }) {
-  // Use demo provider in development when Clerk key is not configured
-  if (isDevelopmentDemo) {
-    return (
-      <DemoAuthProvider>
-        <div className="demo-mode-banner bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <Leaf className="h-5 w-5 text-yellow-500" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm">
-                <strong>Demo Mode:</strong> Using mock authentication. 
-                Configure VITE_CLERK_PUBLISHABLE_KEY for production.
-                <br />
-                <span className="text-xs">
-                  Demo credentials: demo@chamundanursery.com / admin@chamundanursery.com (password: demo123)
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-        {children}
-      </DemoAuthProvider>
-    )
-  }
-
   return (
     <BaseClerkProvider
       publishableKey={PUBLISHABLE_KEY}
       afterSignOutUrl="/"
+      appearance={clerkTheme}
     >
       {children}
     </BaseClerkProvider>

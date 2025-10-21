@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
   Search, 
@@ -11,16 +11,22 @@ import {
   Package,
   DollarSign,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import { useCategories } from '../../hooks/usePublicData.js';
-import { useAdminProducts } from '../../hooks/queries/useProducts.js';
+import { useAdminProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '../../hooks/queries/useProducts.js';
+import { ProductForm } from '../../admin/components/ProductForm.jsx';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const AdminProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   
   const { data: categoriesData } = useCategories();
   
@@ -37,6 +43,11 @@ const AdminProducts = () => {
 
   const products = productsData?.products || [];
 
+  // Mutation hooks for product operations
+  const createProductMutation = useCreateProduct();
+  const updateProductMutation = useUpdateProduct();
+  const deleteProductMutation = useDeleteProduct();
+
   const stats = [
     {
       title: 'Total Products',
@@ -46,18 +57,18 @@ const AdminProducts = () => {
       change: '+12%'
     },
     {
-      title: 'Total Revenue',
-      value: '$12,450',
+      title: 'Active Products',
+      value: products.filter(p => p.status === 'active').length,
       icon: DollarSign,
       color: 'bg-green-500',
       change: '+8.2%'
     },
     {
-      title: 'Best Seller',
-      value: 'Fiddle Leaf Fig',
+      title: 'Featured',
+      value: products.filter(p => p.featured).length,
       icon: TrendingUp,
       color: 'bg-purple-500',
-      change: '156 sales'
+      change: 'Featured items'
     },
     {
       title: 'Low Stock',
@@ -86,8 +97,11 @@ const AdminProducts = () => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (product.Category?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || product.Category?.name === filterCategory;
+                         (product.categories && product.categories.some(cat => 
+                           cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+                         ));
+    const matchesCategory = filterCategory === 'all' || 
+                           (product.categories && product.categories.some(cat => cat.name === filterCategory));
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
     
     return matchesSearch && matchesCategory && matchesStatus;
@@ -109,15 +123,90 @@ const AdminProducts = () => {
     }
   };
 
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setShowProductForm(true);
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowProductForm(true);
+  };
+
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editingProduct) {
+        await updateProductMutation.mutateAsync({
+          id: editingProduct.id,
+          ...formData
+        });
+      } else {
+        await createProductMutation.mutateAsync(formData);
+      }
+      setShowProductForm(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await deleteProductMutation.mutateAsync(productId);
+      } catch (error) {
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
+  // Show loading state
+  if (productsLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading products...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (productsError) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Products</h3>
+            <p className="text-gray-600 mb-4">{productsError.message}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-600">Manage your product inventory</p>
+          <h1 className="text-2xl font-bold text-gray-900">Products Management</h1>
+          <p className="text-gray-600">Manage your product catalog with advanced features</p>
         </div>
-        <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+        <button 
+          onClick={handleAddProduct}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" />
           Add Product
         </button>
@@ -242,13 +331,16 @@ const AdminProducts = () => {
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
+                  Inventory
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sales
+                  Featured
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -273,45 +365,130 @@ const AdminProducts = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-10 h-10 rounded-lg object-cover mr-3"
-                      />
+                      {(() => {
+                        // Find primary image or use first image
+                        const primaryImage = product.images?.find(img => img.is_primary) || product.images?.[0];
+                        let imageUrl = '/placeholder-image.svg'; // Default fallback
+                        
+                        if (primaryImage) {
+                          // Use full_url from backend if available, otherwise construct URL with correct port
+                          if (primaryImage.full_url) {
+                            imageUrl = primaryImage.full_url;
+                          } else if (primaryImage.image_url) {
+                            // Construct URL with correct backend port (4000)
+                            const filename = primaryImage.image_url.includes('/') 
+                              ? primaryImage.image_url.split('/').pop() 
+                              : primaryImage.image_url;
+                            imageUrl = `${API_BASE}/uploads/products/${filename}`;
+                          }
+                        }
+                        
+                        return (
+                          <img
+                            src={imageUrl}
+                            alt={product.name}
+                            className="w-12 h-12 rounded-lg object-cover mr-3 border border-gray-200"
+                            onError={(e) => {
+                              console.log('Image failed to load:', e.target.src);
+                              e.target.src = '/placeholder-image.svg';
+                            }}
+                            onLoad={() => {
+                              console.log('Image loaded successfully:', imageUrl);
+                            }}
+                          />
+                        );
+                      })()}
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {product.name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          Rating: {product.rating}★
+                          SKU: {product.sku || 'N/A'} | Rating: {product.rating}★
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {product.description ? product.description.substring(0, 50) + '...' : 'No description'}
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {product.Category?.name || 'No Category'}
+                    {(product.categories && product.categories.length > 0) ? (
+                      <div className="flex flex-wrap gap-1">
+                        {product.categories.map((category, index) => (
+                          <span
+                            key={category.id}
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              category.ProductCategory?.is_primary 
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {category.name}
+                            {category.ProductCategory?.is_primary && (
+                              <span className="ml-1 text-blue-600">★</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    ) : product.Category ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                        {product.Category.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">No Category</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    ${product.price}
+                    <div className="font-medium">${product.price}</div>
+                    {product.compare_price && product.compare_price > product.price && (
+                      <div className="text-xs text-gray-500 line-through">
+                        ${product.compare_price}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {product.stock}
+                    <div className="font-medium">{product.inventory || 0} units</div>
+                    <div className="text-xs text-gray-500">
+                      Min: {product.low_stock_threshold || 0}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     {getStatusBadge(product.status)}
                   </td>
+                  <td className="px-6 py-4">
+                    {product.featured ? (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                        ⭐ Featured
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        Regular
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {product.sales}
+                    <div className="font-medium">
+                      {new Date(product.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(product.created_at).toLocaleTimeString()}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button className="text-blue-600 hover:text-blue-700">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="text-green-600 hover:text-green-700">
+                      <button 
+                        onClick={() => handleEditProduct(product)}
+                        className="text-green-600 hover:text-green-700"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-700">
+                      <button 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                       <button className="text-gray-600 hover:text-gray-700">
@@ -356,6 +533,51 @@ const AdminProducts = () => {
           </div>
         </div>
       )}
+
+      {/* Product Form Modal */}
+      <AnimatePresence>
+        {showProductForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowProductForm(false);
+                    setEditingProduct(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <ProductForm
+                  product={editingProduct}
+                  onSubmit={handleFormSubmit}
+                  onCancel={() => {
+                    setShowProductForm(false);
+                    setEditingProduct(null);
+                  }}
+                  isLoading={createProductMutation.isPending || updateProductMutation.isPending}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

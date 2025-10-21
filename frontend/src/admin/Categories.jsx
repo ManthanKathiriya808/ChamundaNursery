@@ -25,6 +25,7 @@ import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory 
 import useUIStore from '../stores/uiStore'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../components/ToastProvider'
+import useSSE from '../hooks/useSSE'
 
 /**
  * Category form validation schema
@@ -523,10 +524,28 @@ export default function AdminCategories() {
   const [sortBy, setSortBy] = useState('sortOrder')
 
   // API hooks for category management
-  const { data: categories = [], isLoading, error } = useCategories()
+  const { data: categories = [], isLoading, error } = useCategories({ showInactive })
   const createCategoryMutation = useCreateCategory()
   const updateCategoryMutation = useUpdateCategory()
   const deleteCategoryMutation = useDeleteCategory()
+
+  // SSE connection for real-time updates
+  const { isConnected } = useSSE(`${import.meta.env.VITE_API_URL || 'http://localhost:4001'}/api/sse/events`, {
+    onMessage: (data) => {
+      console.log('Real-time category update:', data)
+      if (data.type === 'category_created') {
+        showToast('New category created', 'success')
+      } else if (data.type === 'category_updated') {
+        showToast('Category updated', 'info')
+      } else if (data.type === 'category_deleted') {
+        showToast('Category deleted', 'warning')
+      }
+    },
+    onError: (error) => {
+      console.error('SSE connection error:', error)
+    },
+    enabled: true
+  })
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -733,6 +752,13 @@ export default function AdminCategories() {
             <p className="text-gray-600 mt-1">
               Organize your products with hierarchical categories
             </p>
+            {/* Real-time connection status */}
+            <div className="flex items-center mt-2 text-sm">
+              <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={isConnected ? 'text-green-600' : 'text-red-600'}>
+                {isConnected ? 'Real-time updates active' : 'Real-time updates disconnected'}
+              </span>
+            </div>
           </div>
           <button
             onClick={() => {

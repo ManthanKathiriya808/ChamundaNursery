@@ -69,24 +69,20 @@ export default function AdminUsers() {
     }
   }
 
-  const handleToggleStatus = async (userId, currentStatus) => {
-    try {
-      await toggleUserStatusMutation.mutateAsync({ 
-        id: userId, 
-        isActive: !currentStatus 
-      })
-    } catch (error) {
-      console.error('Failed to toggle user status:', error)
-    }
-  }
+
 
   const handleDeleteUser = async (userId) => {
+    console.log('Delete button clicked for user ID:', userId)
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      console.log('User confirmed deletion, attempting to delete...')
       try {
         await deleteUserMutation.mutateAsync(userId)
+        console.log('Delete mutation completed successfully')
       } catch (error) {
         console.error('Failed to delete user:', error)
       }
+    } else {
+      console.log('User cancelled deletion')
     }
   }
 
@@ -94,8 +90,7 @@ export default function AdminUsers() {
     switch (role) {
       case 'admin':
         return <ShieldCheck className="w-4 h-4 text-red-600" />
-      case 'manager':
-        return <Shield className="w-4 h-4 text-orange-600" />
+
       default:
         return <UserCheck className="w-4 h-4 text-blue-600" />
     }
@@ -105,8 +100,7 @@ export default function AdminUsers() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800 border-red-200'
-      case 'manager':
-        return 'bg-orange-100 text-orange-800 border-orange-200'
+
       default:
         return 'bg-blue-100 text-blue-800 border-blue-200'
     }
@@ -180,23 +174,12 @@ export default function AdminUsers() {
             >
               <option value="all">All Roles</option>
               <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
+             
               <option value="customer">Customer</option>
             </select>
           </div>
 
-          {/* Status Filter */}
-          <div className="sm:w-48">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
+   
         </div>
       </div>
 
@@ -212,9 +195,7 @@ export default function AdminUsers() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+            
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Joined
                 </th>
@@ -263,38 +244,16 @@ export default function AdminUsers() {
                           disabled={updateUserRoleMutation.isPending}
                         >
                           <option value="customer">Customer</option>
-                          <option value="manager">Manager</option>
+                         
                           <option value="admin">Admin</option>
                         </select>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleStatus(user.id, user.isActive)}
-                        disabled={toggleUserStatusMutation.isPending}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
-                          user.isActive
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
-                      >
-                        {user.isActive ? (
-                          <>
-                            <CheckCircle className="w-3 h-3" />
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <X className="w-3 h-3" />
-                            Inactive
-                          </>
-                        )}
-                      </button>
-                    </td>
+                
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        {new Date(user.created_at).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

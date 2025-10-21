@@ -92,8 +92,12 @@ export const useClerkJWTBridge = () => {
             const result = await response.json()
             console.log('Clerk JWT Bridge: User synced successfully', result.user)
             
-            // Store JWT token and user data for API calls
-            localStorage.setItem('auth.token', result.token)
+            // Store JWT token and user data for API calls in the format expected by useProducts
+            const authData = {
+              token: result.token,
+              user: result.user
+            }
+            localStorage.setItem('auth', JSON.stringify(authData))
             localStorage.setItem('auth.user', JSON.stringify(result.user))
             setDbUser(result.user)
             
@@ -116,7 +120,7 @@ export const useClerkJWTBridge = () => {
       } else if (!isSignedIn) {
         console.log('Clerk JWT Bridge: User signed out, clearing data')
         // Clear data when signed out
-        localStorage.removeItem('auth.token')
+        localStorage.removeItem('auth')
         localStorage.removeItem('auth.user')
         localStorage.removeItem('user_sync_completed')
         setDbUser(null)

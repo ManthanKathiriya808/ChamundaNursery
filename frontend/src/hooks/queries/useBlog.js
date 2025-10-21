@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryClient'
 import useUIStore from '../../stores/uiStore'
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 /**
  * Blog/Plant Care API functions
@@ -27,7 +27,7 @@ const blogAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/blog?${params}`)
+    const response = await fetch(`${API_BASE}/api/blog?${params}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch blog posts: ${response.statusText}`)
     }
@@ -40,7 +40,7 @@ const blogAPI = {
    * @returns {Promise} Blog post data with full content and metadata
    */
   getById: async (id) => {
-    const response = await fetch(`${API_BASE}/blog/${id}`)
+    const response = await fetch(`${API_BASE}/api/blog/${id}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch blog post: ${response.statusText}`)
     }
@@ -80,7 +80,7 @@ const blogAPI = {
       })
     }
     
-    const response = await fetch(`${API_BASE}/admin/blog`, {
+    const response = await fetch(`${API_BASE}/api/admin/blog`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
@@ -135,7 +135,7 @@ const blogAPI = {
       })
     }
     
-    const response = await fetch(`${API_BASE}/admin/blog/${id}`, {
+    const response = await fetch(`${API_BASE}/api/admin/blog/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
@@ -156,7 +156,7 @@ const blogAPI = {
    * @returns {Promise} Success confirmation
    */
   delete: async (id) => {
-    const response = await fetch(`${API_BASE}/admin/blog/${id}`, {
+    const response = await fetch(`${API_BASE}/api/admin/blog/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
@@ -181,7 +181,7 @@ const blogAPI = {
       formData.append('images', image)
     })
     
-    const response = await fetch(`${API_BASE}/admin/blog/upload-images`, {
+    const response = await fetch(`${API_BASE}/api/admin/blog/upload-images`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
@@ -200,7 +200,7 @@ const blogAPI = {
    * @returns {Promise} Array of tag objects
    */
   getTags: async () => {
-    const response = await fetch(`${API_BASE}/blog/tags`)
+    const response = await fetch(`${API_BASE}/api/blog/tags`)
     if (!response.ok) {
       throw new Error(`Failed to fetch tags: ${response.statusText}`)
     }
@@ -221,7 +221,7 @@ const blogAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/blog/search?${params}`)
+    const response = await fetch(`${API_BASE}/api/blog/search?${params}`)
     if (!response.ok) {
       throw new Error(`Failed to search blog posts: ${response.statusText}`)
     }

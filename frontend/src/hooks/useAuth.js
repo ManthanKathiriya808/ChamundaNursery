@@ -2,96 +2,33 @@
  * Unified Authentication Hook
  * 
  * This hook provides a consistent interface for authentication
- * that works with both Clerk (production) and demo mode (development).
- * It automatically detects which provider is being used and returns
- * the appropriate authentication state and methods.
+ * using Clerk for all environments.
  */
 
-import { useContext } from 'react'
 import { useUser as useClerkUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react'
-import { useDemoAuth } from '../providers/DemoAuthProvider'
-
-// Check if we're in demo mode
-const isDemoMode = !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || 
-                   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY === 'pk_test_your_publishable_key_here'
 
 /**
- * Unified user hook that works with both Clerk and demo mode
+ * Unified user hook using Clerk
  * @returns {Object} User object and loading state
  */
 export function useUser() {
-  if (isDemoMode && !import.meta.env.PROD) {
-    try {
-      const { user, isLoaded } = useDemoAuth()
-      return { user, isLoaded }
-    } catch (error) {
-      // Fallback if demo context is not available
-      return { user: null, isLoaded: true }
-    }
-  }
-
-  try {
-    return useClerkUser()
-  } catch (error) {
-    // Fallback if Clerk is not properly configured
-    return { user: null, isLoaded: true }
-  }
+  return useClerkUser()
 }
 
 /**
- * Unified auth hook that works with both Clerk and demo mode
+ * Unified auth hook using Clerk
  * @returns {Object} Authentication state and methods
  */
 export function useAuth() {
-  if (isDemoMode && !import.meta.env.PROD) {
-    try {
-      const { isSignedIn, isLoaded, signOut } = useDemoAuth()
-      return { isSignedIn, isLoaded, signOut }
-    } catch (error) {
-      // Fallback if demo context is not available
-      return { isSignedIn: false, isLoaded: true, signOut: () => {} }
-    }
-  }
-
-  try {
-    return useClerkAuth()
-  } catch (error) {
-    // Fallback if Clerk is not properly configured
-    return { isSignedIn: false, isLoaded: true, signOut: () => {} }
-  }
+  return useClerkAuth()
 }
 
 /**
- * Unified clerk methods hook that works with both Clerk and demo mode
- * @returns {Object} Clerk-like methods for opening auth modals
+ * Unified clerk methods hook using Clerk
+ * @returns {Object} Clerk methods for opening auth modals
  */
 export function useClerkMethods() {
-  if (isDemoMode && !import.meta.env.PROD) {
-    try {
-      const { openSignIn, openSignUp, openUserProfile, signOut } = useDemoAuth()
-      return { openSignIn, openSignUp, openUserProfile, signOut }
-    } catch (error) {
-      // Fallback if demo context is not available
-      return {
-        openSignIn: () => window.location.href = '/account/login',
-        openSignUp: () => window.location.href = '/account/register',
-        openUserProfile: () => window.location.href = '/account/profile',
-        signOut: () => {}
-      }
-    }
-  }
-
-  try {
-    return useClerk()
-  } catch (error) {
-    // Fallback if Clerk is not properly configured
-    return {
-      openSignIn: () => window.location.href = '/account/login',
-      openSignUp: () => window.location.href = '/account/register',
-      openUserProfile: () => window.location.href = '/account/profile',
-      signOut: () => {}
-    }
-  }
+  return useClerk()
 }
 
 /**
@@ -120,10 +57,6 @@ export function useUserDisplayName() {
   const { user } = useUser()
   
   if (!user) return 'Guest'
-  
-  if (isDemoMode && !import.meta.env.PROD) {
-    return `${user.firstName} ${user.lastName}`.trim() || user.email
-  }
   
   return user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.primaryEmailAddress?.emailAddress || 'User'
 }

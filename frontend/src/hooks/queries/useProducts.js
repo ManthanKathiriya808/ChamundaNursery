@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryClient'
 import useUIStore from '../../stores/uiStore'
+import { useAuth } from '@clerk/clerk-react'
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-// API functions
-const productAPI = {
+// API functions - Create a factory function to access auth
+const createProductAPI = (getToken) => ({
   getAll: async (filters = {}) => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
@@ -14,7 +15,7 @@ const productAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/products?${params}`)
+    const response = await fetch(`${API_BASE}/api/products?${params}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch products: ${response.statusText}`)
     }
@@ -30,10 +31,16 @@ const productAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/admin/products?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
-      },
+    // Use custom JWT token from localStorage instead of Clerk token
+    const token = localStorage.getItem('auth.token')
+    const headers = {}
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
+    const response = await fetch(`${API_BASE}/api/admin/products?${params}`, {
+      headers,
     })
     if (!response.ok) {
       throw new Error(`Failed to fetch admin products: ${response.statusText}`)
@@ -42,7 +49,7 @@ const productAPI = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE}/products/${id}`)
+    const response = await fetch(`${API_BASE}/api/products/${id}`)
     if (!response.ok) {
       throw new Error(`Failed to fetch product: ${response.statusText}`)
     }
@@ -50,7 +57,7 @@ const productAPI = {
   },
 
   search: async (query) => {
-    const response = await fetch(`${API_BASE}/products/search?q=${encodeURIComponent(query)}`)
+    const response = await fetch(`${API_BASE}/api/products/search?q=${encodeURIComponent(query)}`)
     if (!response.ok) {
       throw new Error(`Failed to search products: ${response.statusText}`)
     }
@@ -133,10 +140,13 @@ const productAPI = {
 
     console.log('Sending FormData with keys:', Array.from(formData.keys()))
 
-    const response = await fetch(`${API_BASE}/admin/products`, {
+    // Use custom JWT token from localStorage instead of Clerk token
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    const token = auth.token
+    const response = await fetch(`${API_BASE}/api/admin/products`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYwOTQ4NTI4LCJleHAiOjE3NjEwMzQ5Mjh9.Yk3fxqomxhjOVO1XHMZVLFQXkzKmGlwQakeNPhQfC0U`,
+        'Authorization': `Bearer ${token}`,
         // Don't set Content-Type header - let browser set it with boundary for FormData
       },
       credentials: 'include',
@@ -233,10 +243,13 @@ const productAPI = {
 
     console.log('Sending FormData with keys:', Array.from(formData.keys()))
 
-    const response = await fetch(`${API_BASE}/admin/products/${id}`, {
+    // Use custom JWT token from localStorage instead of Clerk token
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    const token = auth.token
+    const response = await fetch(`${API_BASE}/api/admin/products/${id}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYwOTQ4NTI4LCJleHAiOjE3NjEwMzQ5Mjh9.Yk3fxqomxhjOVO1XHMZVLFQXkzKmGlwQakeNPhQfC0U`,
+        'Authorization': `Bearer ${token}`,
         // Don't set Content-Type header - let browser set it with boundary for FormData
       },
       credentials: 'include',
@@ -257,22 +270,32 @@ const productAPI = {
   },
 
   delete: async (id) => {
-    const response = await fetch(`${API_BASE}/admin/products/${id}`, {
+    // Use custom JWT token from localStorage instead of Clerk token
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    const token = auth.token
+    const response = await fetch(`${API_BASE}/api/admin/products/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        'Authorization': `Bearer ${token}`,
       },
     })
     if (!response.ok) {
       throw new Error(`Failed to delete product: ${response.statusText}`)
     }
-    return { success: true }
+    // Handle 204 No Content response - don't try to parse JSON
+    if (response.status === 204) {
+      return { success: true }
+    }
+    // For other success responses, try to parse JSON
+    return response.json()
   },
-}
+})
 
 // Query hooks
 export const useProducts = (filters = {}) => {
   const { setLoading } = useUIStore()
+  const { getToken } = useAuth()
+  const productAPI = createProductAPI(getToken)
   
   return useQuery({
     queryKey: queryKeys.products.list(filters),
@@ -291,16 +314,21 @@ export const useProducts = (filters = {}) => {
 // Admin products hook for admin panel
 export const useAdminProducts = (filters = {}) => {
   const { setLoading } = useUIStore()
+  const { getToken } = useAuth()
+  const productAPI = createProductAPI(getToken)
   
   return useQuery({
     queryKey: ['admin-products', filters],
     queryFn: async () => {
       const response = await productAPI.getAllAdmin(filters)
       // Return the products array from the admin response structure
-      // The API returns { data: [...products], pagination: {...} }
+      // The API returns { products: [...], pagination: {...}, filters: {...} }
       return {
-        products: response.data || [],
-        pagination: response.pagination || {}
+        products: response.products || [],
+        total: response.pagination?.total || 0,
+        totalPages: response.pagination?.pages || 1,
+        pagination: response.pagination || {},
+        filters: response.filters || {}
       }
     },
     onSettled: () => setLoading('products', false),
@@ -311,6 +339,9 @@ export const useAdminProducts = (filters = {}) => {
 }
 
 export const useProduct = (id) => {
+  const { getToken } = useAuth()
+  const productAPI = createProductAPI(getToken)
+  
   return useQuery({
     queryKey: queryKeys.products.detail(id),
     queryFn: () => productAPI.getById(id),
@@ -322,6 +353,9 @@ export const useProduct = (id) => {
 }
 
 export const useProductSearch = (query) => {
+  const { getToken } = useAuth()
+  const productAPI = createProductAPI(getToken)
+  
   return useQuery({
     queryKey: queryKeys.products.search(query),
     queryFn: () => productAPI.search(query),
@@ -337,6 +371,14 @@ export const useProductSearch = (query) => {
 export const useCreateProduct = () => {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
+  
+  // Use custom JWT token from localStorage instead of Clerk's getToken
+  const getCustomToken = () => {
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    return auth.token || null
+  }
+  
+  const productAPI = createProductAPI(getCustomToken)
 
   return useMutation({
     mutationFn: productAPI.create,
@@ -361,6 +403,14 @@ export const useCreateProduct = () => {
 export const useUpdateProduct = () => {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
+  
+  // Use custom JWT token from localStorage instead of Clerk's getToken
+  const getCustomToken = () => {
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    return auth.token || null
+  }
+  
+  const productAPI = createProductAPI(getCustomToken)
 
   return useMutation({
     mutationFn: productAPI.update,
@@ -385,6 +435,14 @@ export const useUpdateProduct = () => {
 export const useDeleteProduct = () => {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
+  
+  // Use custom JWT token from localStorage instead of Clerk's getToken
+  const getCustomToken = () => {
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    return auth.token || null
+  }
+  
+  const productAPI = createProductAPI(getCustomToken)
 
   return useMutation({
     mutationFn: productAPI.delete,
@@ -406,6 +464,14 @@ export const useDeleteProduct = () => {
 // Prefetch utilities
 export const usePrefetchProduct = () => {
   const queryClient = useQueryClient()
+  
+  // Use custom JWT token from localStorage instead of Clerk's getToken
+  const getCustomToken = () => {
+    const auth = JSON.parse(localStorage.getItem('auth') || '{}')
+    return auth.token || null
+  }
+  
+  const productAPI = createProductAPI(getCustomToken)
   
   return (id) => {
     queryClient.prefetchQuery({

@@ -45,17 +45,8 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* Role-based access notification */}
-      {!isAdmin && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-4 mt-4 rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-yellow-800"
-        >
-          <p className="text-sm font-medium">Demo Mode</p>
-          <p className="text-xs mt-1">Some admin actions are disabled</p>
-        </motion.div>
-      )}
+      {/* Role-based access notification - Removed Demo Mode */}
+      {/* Demo mode notification removed for production */}
 
       {/* Navigation */}
       <div className="flex-1 p-4">

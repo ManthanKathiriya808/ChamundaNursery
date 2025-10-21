@@ -3,7 +3,7 @@
  * Handles all API communications with proper error handling, loading states, and caching
  */
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 // Helper function for API requests with error handling
 const apiRequest = async (url, options = {}) => {
@@ -39,12 +39,12 @@ export const productsAPI = {
         params.append(key, value)
       }
     })
-    return apiRequest(`/products?${params}`)
+    return apiRequest(`/api/products?${params}`)
   },
 
   // Get single product by ID
   getById: async (id) => {
-    return apiRequest(`/products/${id}`)
+    return apiRequest(`/api/products/${id}`)
   },
 
   // Search products
@@ -55,17 +55,17 @@ export const productsAPI = {
         params.append(key, value)
       }
     })
-    return apiRequest(`/products/search?${params}`)
+    return apiRequest(`/api/products/search?${params}`)
   },
 
   // Get featured products
   getFeatured: async (limit = 8) => {
-    return apiRequest(`/products/featured?limit=${limit}`)
+    return apiRequest(`/api/products/featured?limit=${limit}`)
   },
 
   // Get related products
   getRelated: async (productId, limit = 4) => {
-    return apiRequest(`/products/${productId}/related?limit=${limit}`)
+    return apiRequest(`/api/products/${productId}/related?limit=${limit}`)
   },
 }
 
@@ -75,12 +75,12 @@ export const productsAPI = {
 export const categoriesAPI = {
   // Get all categories
   getAll: async () => {
-    return apiRequest('/categories')
+    return apiRequest('/api/categories')
   },
 
   // Get category by ID with products
   getById: async (id) => {
-    return apiRequest(`/categories/${id}`)
+    return apiRequest(`/api/categories/${id}`)
   },
 
   // Get category products
@@ -91,7 +91,7 @@ export const categoriesAPI = {
         params.append(key, value)
       }
     })
-    return apiRequest(`/categories/${categoryId}/products?${params}`)
+    return apiRequest(`/api/categories/${categoryId}/products?${params}`)
   },
 }
 
@@ -111,12 +111,12 @@ export const blogAPI = {
         }
       }
     })
-    return apiRequest(`/blog?${params}`)
+    return apiRequest(`/api/blog?${params}`)
   },
 
   // Get single blog post
   getById: async (id) => {
-    return apiRequest(`/blog/${id}`)
+    return apiRequest(`/api/blog/${id}`)
   },
 
   // Search blog posts
@@ -127,12 +127,12 @@ export const blogAPI = {
         params.append(key, value)
       }
     })
-    return apiRequest(`/blog/search?${params}`)
+    return apiRequest(`/api/blog/search?${params}`)
   },
 
   // Get featured blog posts
   getFeatured: async (limit = 3) => {
-    return apiRequest(`/blog/featured?limit=${limit}`)
+    return apiRequest(`/api/blog/featured?limit=${limit}`)
   },
 }
 
@@ -148,17 +148,17 @@ export const plantCareAPI = {
         params.append(key, value)
       }
     })
-    return apiRequest(`/plant-care?${params}`)
+    return apiRequest(`/api/plant-care?${params}`)
   },
 
   // Get single plant care article
   getById: async (id) => {
-    return apiRequest(`/plant-care/${id}`)
+    return apiRequest(`/api/plant-care/${id}`)
   },
 
   // Search plant care articles
   search: async (query) => {
-    return apiRequest(`/plant-care/search?q=${encodeURIComponent(query)}`)
+    return apiRequest(`/api/plant-care/search?q=${encodeURIComponent(query)}`)
   },
 }
 
@@ -170,7 +170,7 @@ export const mediaAPI = {
   getImageUrl: (path) => {
     if (!path) return '/placeholder-image.jpg'
     if (path.startsWith('http')) return path
-    return `http://localhost:4000/uploads/${path}`
+    return `${API_BASE}/uploads/${path}`
   },
 }
 

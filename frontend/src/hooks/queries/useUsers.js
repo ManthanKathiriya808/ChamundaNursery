@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryClient'
 import useUIStore from '../../stores/uiStore'
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 // API functions
 const userAPI = {
@@ -14,7 +14,7 @@ const userAPI = {
       }
     })
     
-    const response = await fetch(`${API_BASE}/admin/users?${params}`, {
+    const response = await fetch(`${API_BASE}/api/admin/users?${params}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
@@ -26,7 +26,7 @@ const userAPI = {
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE}/admin/users/${id}`, {
+    const response = await fetch(`${API_BASE}/api/users/${id}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
@@ -38,7 +38,7 @@ const userAPI = {
   },
 
   create: async (userData) => {
-    const response = await fetch(`${API_BASE}/admin/users`, {
+    const response = await fetch(`${API_BASE}/api/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ const userAPI = {
   },
 
   update: async ({ id, ...userData }) => {
-    const response = await fetch(`${API_BASE}/admin/users/${id}`, {
+    const response = await fetch(`${API_BASE}/api/users/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ const userAPI = {
   },
 
   updateRole: async ({ id, role }) => {
-    const response = await fetch(`${API_BASE}/admin/users/${id}/role`, {
+    const response = await fetch(`${API_BASE}/api/users/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -83,31 +83,76 @@ const userAPI = {
   },
 
   delete: async (id) => {
-    const response = await fetch(`${API_BASE}/admin/users/${id}`, {
+    const token = localStorage.getItem('auth.token')
+    console.log('Delete API called with:', { id, token: token ? 'Token exists' : 'No token' })
+    
+    const response = await fetch(`${API_BASE}/api/users/${id}/permanent`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        'Authorization': `Bearer ${token}`,
       },
     })
+    
+    console.log('Delete API response:', { status: response.status, ok: response.ok })
+    
     if (!response.ok) {
       throw new Error(`Failed to delete user: ${response.statusText}`)
     }
     return { success: true }
   },
 
-  toggleStatus: async ({ id, isActive }) => {
-    const response = await fetch(`${API_BASE}/admin/users/${id}/status`, {
-      method: 'PUT',
+  softDelete: async (id) => {
+    const response = await fetch(`${API_BASE}/api/users/${id}`, {
+      method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
       },
-      body: JSON.stringify({ isActive }),
     })
     if (!response.ok) {
-      throw new Error(`Failed to update user status: ${response.statusText}`)
+      throw new Error(`Failed to deactivate user: ${response.statusText}`)
     }
     return response.json()
+  },
+
+  reactivate: async (id) => {
+    const response = await fetch(`${API_BASE}/api/users/${id}/activate`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+      },
+    })
+    if (!response.ok) {
+      throw new Error(`Failed to reactivate user: ${response.statusText}`)
+    }
+    return response.json()
+  },
+
+  toggleStatus: async ({ id, isActive }) => {
+    if (isActive) {
+      // Reactivate user
+      const response = await fetch(`${API_BASE}/api/users/${id}/activate`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`Failed to reactivate user: ${response.statusText}`)
+      }
+      return response.json()
+    } else {
+      // Soft delete (deactivate) user
+      const response = await fetch(`${API_BASE}/api/users/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth.token')}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`Failed to deactivate user: ${response.statusText}`)
+      }
+      return response.json()
+    }
   },
 }
 
@@ -118,6 +163,7 @@ export const useUsers = (filters = {}) => {
   return useQuery({
     queryKey: ['users', 'list', filters],
     queryFn: () => userAPI.getAll(filters),
+    select: (data) => data.users || [], // Extract users array from API response
     onSettled: () => setLoading('users', false),
     onError: (error) => {
       useUIStore.getState().showError(error.message, 'Failed to load users')
@@ -231,6 +277,54 @@ export const useDeleteUser = () => {
   })
 }
 
+export const useSoftDeleteUser = () => {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useUIStore()
+
+  return useMutation({
+    mutationFn: userAPI.softDelete,
+    onSuccess: (updatedUser) => {
+      // Update the specific user in cache
+      queryClient.setQueryData(
+        ['users', 'detail', updatedUser.id],
+        updatedUser
+      )
+      
+      // Invalidate users list to reflect changes
+      queryClient.invalidateQueries({ queryKey: ['users', 'list'] })
+      
+      showSuccess('User deactivated successfully!')
+    },
+    onError: (error) => {
+      showError(error.message, 'Failed to deactivate user')
+    },
+  })
+}
+
+export const useReactivateUser = () => {
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useUIStore()
+
+  return useMutation({
+    mutationFn: userAPI.reactivate,
+    onSuccess: (updatedUser) => {
+      // Update the specific user in cache
+      queryClient.setQueryData(
+        ['users', 'detail', updatedUser.id],
+        updatedUser
+      )
+      
+      // Invalidate users list to reflect changes
+      queryClient.invalidateQueries({ queryKey: ['users', 'list'] })
+      
+      showSuccess('User reactivated successfully!')
+    },
+    onError: (error) => {
+      showError(error.message, 'Failed to reactivate user')
+    },
+  })
+}
+
 export const useToggleUserStatus = () => {
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useUIStore()
@@ -247,7 +341,7 @@ export const useToggleUserStatus = () => {
       // Invalidate users list to reflect changes
       queryClient.invalidateQueries({ queryKey: ['users', 'list'] })
       
-      showSuccess(`User ${updatedUser.isActive ? 'activated' : 'deactivated'} successfully!`)
+      showSuccess(`User ${updatedUser.is_active ? 'activated' : 'deactivated'} successfully!`)
     },
     onError: (error) => {
       showError(error.message, 'Failed to update user status')
