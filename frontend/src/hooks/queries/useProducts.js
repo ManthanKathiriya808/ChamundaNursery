@@ -120,14 +120,10 @@ const createProductAPI = (getToken) => ({
       }
     })
 
-    // Add categoryIds as array for admin endpoint
+    // Add categoryIds as JSON string for backend validation
     if (productData.categoryIds && Array.isArray(productData.categoryIds)) {
-      // For FormData, we need to append each categoryId individually
-      // The backend will receive this as an array
-      productData.categoryIds.forEach(categoryId => {
-        formData.append('categoryIds[]', String(categoryId))
-      })
-      console.log('Adding categoryIds to FormData:', productData.categoryIds)
+      formData.append('categoryIds', JSON.stringify(productData.categoryIds))
+      console.log('Adding categoryIds to FormData as JSON:', JSON.stringify(productData.categoryIds))
     }
 
     // Add image files if present
@@ -146,7 +142,6 @@ const createProductAPI = (getToken) => ({
     const response = await fetch(`${API_BASE}/api/products`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
         // Don't set Content-Type header - let browser set it with boundary for FormData
       },
       credentials: 'include',
@@ -223,14 +218,10 @@ const createProductAPI = (getToken) => ({
       }
     })
 
-    // Add categoryIds as array for admin endpoint
+    // Add categoryIds as JSON string for backend validation
     if (productData.categoryIds && Array.isArray(productData.categoryIds)) {
-      // For FormData, we need to append each categoryId individually
-      // The backend will receive this as an array
-      productData.categoryIds.forEach(categoryId => {
-        formData.append('categoryIds[]', String(categoryId))
-      })
-      console.log('Adding categoryIds to FormData:', productData.categoryIds)
+      formData.append('categoryIds', JSON.stringify(productData.categoryIds))
+      console.log('Adding categoryIds to FormData as JSON:', JSON.stringify(productData.categoryIds))
     }
 
     // Add image files if present
@@ -246,10 +237,9 @@ const createProductAPI = (getToken) => ({
     // Use custom JWT token from localStorage instead of Clerk token
     const auth = JSON.parse(localStorage.getItem('auth') || '{}')
     const token = auth.token
-    const response = await fetch(`${API_BASE}/api/admin/products/${id}`, {
+    const response = await fetch(`${API_BASE}/api/products/${id}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${token}`,
         // Don't set Content-Type header - let browser set it with boundary for FormData
       },
       credentials: 'include',
@@ -273,10 +263,9 @@ const createProductAPI = (getToken) => ({
     // Use custom JWT token from localStorage instead of Clerk token
     const auth = JSON.parse(localStorage.getItem('auth') || '{}')
     const token = auth.token
-    const response = await fetch(`${API_BASE}/api/admin/products/${id}`, {
+    const response = await fetch(`${API_BASE}/api/products/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`,
       },
     })
     if (!response.ok) {

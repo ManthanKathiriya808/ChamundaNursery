@@ -85,7 +85,7 @@ const productSchema = z.object({
     .max(1000, 'Care instructions must be less than 1000 characters')
     .optional(),
   
-  plantType: z.enum(['indoor', 'outdoor', 'both']).optional(),
+  plantType: z.enum(['indoor', 'outdoor', 'succulent', 'flowering', 'foliage', 'herb', 'vegetable', 'fruit', 'tree', 'shrub']).optional(),
   lightRequirement: z.enum(['low', 'medium', 'high', 'bright-indirect']).optional(),
   wateringFrequency: z.enum(['daily', 'weekly', 'bi-weekly', 'monthly']).optional(),
   difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
@@ -193,11 +193,18 @@ export const ProductForm = ({
     parent: category.parent_id ? categories.find(c => c.id === category.parent_id)?.name : null
   }))
 
-  // Plant type options
+  // Plant type options - updated to match backend validation
   const plantTypeOptions = [
     { value: 'indoor', label: 'Indoor Plant' },
     { value: 'outdoor', label: 'Outdoor Plant' },
-    { value: 'both', label: 'Indoor/Outdoor' }
+    { value: 'succulent', label: 'Succulent' },
+    { value: 'flowering', label: 'Flowering Plant' },
+    { value: 'foliage', label: 'Foliage Plant' },
+    { value: 'herb', label: 'Herb' },
+    { value: 'vegetable', label: 'Vegetable' },
+    { value: 'fruit', label: 'Fruit Plant' },
+    { value: 'tree', label: 'Tree' },
+    { value: 'shrub', label: 'Shrub' }
   ]
 
   // Light requirement options
