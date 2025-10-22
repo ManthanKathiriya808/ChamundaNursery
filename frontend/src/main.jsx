@@ -12,6 +12,7 @@ import App from './App.jsx'
 import UserProvider from './hooks/UserProvider.jsx'
 import CartProvider from './hooks/CartProvider.jsx'
 import ToastProvider from './components/ToastProvider.jsx'
+import NotificationRenderer from './components/NotificationRenderer.jsx'
 import ClerkProvider, { ClerkLoadingSpinner } from './providers/ClerkProvider.jsx'
 import ClerkJWTBridge from './components/ClerkJWTBridge.jsx'
 import './styles/index.css'
@@ -70,6 +71,7 @@ createRoot(document.getElementById('root')).render(
             <ErrorBoundary>
               <QueryErrorBoundary>
                 <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <NotificationRenderer />
                   {/* Loading fallback with nursery branding */}
                   <Suspense fallback={<ClerkLoadingSpinner />}>
                     <Routes>

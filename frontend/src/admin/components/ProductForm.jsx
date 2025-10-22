@@ -88,6 +88,7 @@ const productSchema = z.object({
   plantType: z.enum(['indoor', 'outdoor', 'both']).optional(),
   lightRequirement: z.enum(['low', 'medium', 'high', 'bright-indirect']).optional(),
   wateringFrequency: z.enum(['daily', 'weekly', 'bi-weekly', 'monthly']).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
 })
 
 /**
@@ -124,7 +125,7 @@ export const ProductForm = ({
       slug: product?.slug || '',
       description: product?.description || '',
       shortDescription: product?.shortDescription || '',
-      price: product?.price || 0,
+      price: product?.price || 1, // Set minimum valid price
       comparePrice: product?.comparePrice || null,
       inventory: product?.inventory || 0,
       sku: product?.sku || '',
@@ -140,8 +141,17 @@ export const ProductForm = ({
       plantType: product?.plantType || undefined,
       lightRequirement: product?.lightRequirement || undefined,
       wateringFrequency: product?.wateringFrequency || undefined,
+      difficulty: product?.difficulty || undefined,
     },
     mode: 'onChange',
+  })
+
+  // Debug form validation state
+  console.log('Form validation state:', { 
+    isValid, 
+    errors: Object.keys(errors), 
+    errorDetails: errors,
+    formValues: watch()
   })
 
   // Watch form values for dynamic updates
@@ -206,10 +216,21 @@ export const ProductForm = ({
     { value: 'monthly', label: 'Monthly' }
   ]
 
+  // Difficulty options
+  const difficultyOptions = [
+    { value: 'easy', label: 'Easy' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'hard', label: 'Hard' }
+  ]
+
   /**
    * Handle form submission with image upload
    */
   const onFormSubmit = async (data) => {
+    console.log('Form submitted with data:', data)
+    console.log('Current form errors:', errors)
+    console.log('Form is valid:', isValid)
+    
     try {
       // Include images directly in form data for backend processing
       const formData = {
@@ -698,7 +719,7 @@ export const ProductForm = ({
                   Plant Care Information
                 </h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {/* Plant Type */}
                   <div>
                     <Controller
@@ -765,6 +786,31 @@ export const ProductForm = ({
                             value={wateringOptions.find(option => option.value === field.value)}
                             onChange={(selected) => field.onChange(selected?.value || undefined)}
                             placeholder="Select watering frequency..."
+                            isClearable
+                            className="react-select-container"
+                            classNamePrefix="react-select"
+                          />
+                        </div>
+                      )}
+                    />
+                  </div>
+
+                  {/* Difficulty */}
+                  <div>
+                    <Controller
+                      name="difficulty"
+                      control={control}
+                      render={({ field }) => (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Difficulty Level
+                          </label>
+                          <Select
+                            {...field}
+                            options={difficultyOptions}
+                            value={difficultyOptions.find(option => option.value === field.value)}
+                            onChange={(selected) => field.onChange(selected?.value || undefined)}
+                            placeholder="Select difficulty..."
                             isClearable
                             className="react-select-container"
                             classNamePrefix="react-select"
@@ -1102,9 +1148,9 @@ export const ProductForm = ({
           </button>
           <button
             type="submit"
-            disabled={isLoading || imageUpload.isUploading || !isValid}
+            disabled={isLoading || imageUpload.isUploading}
             className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-              isLoading || imageUpload.isUploading || !isValid
+              isLoading || imageUpload.isUploading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700'
             }`}

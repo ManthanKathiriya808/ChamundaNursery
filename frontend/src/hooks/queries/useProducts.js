@@ -74,7 +74,7 @@ const createProductAPI = (getToken) => ({
       specs: productData.specs ? JSON.stringify(productData.specs) : null,
       price: productData.price ? parseFloat(productData.price) : 0, // Convert to number
       compare_price: productData.comparePrice || productData.salePrice, // Map salePrice to compare_price
-      inventory: productData.stock || productData.inventory, // Map stock field to inventory
+      inventory: productData.stock || productData.inventory || 0, // Map to inventory field to match model
       sku: productData.sku,
       weight: productData.weight,
       dimensions: productData.dimensions ? JSON.stringify(productData.dimensions) : 
@@ -143,7 +143,7 @@ const createProductAPI = (getToken) => ({
     // Use custom JWT token from localStorage instead of Clerk token
     const auth = JSON.parse(localStorage.getItem('auth') || '{}')
     const token = auth.token
-    const response = await fetch(`${API_BASE}/api/admin/products`, {
+    const response = await fetch(`${API_BASE}/api/products`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -176,7 +176,7 @@ const createProductAPI = (getToken) => ({
       specs: productData.specs ? JSON.stringify(productData.specs) : null,
       price: productData.price ? parseFloat(productData.price) : 0, // Convert to number
       compare_price: productData.comparePrice || productData.salePrice, // Map salePrice to compare_price
-      inventory: productData.stock || productData.inventory, // Map stock field to inventory
+      inventory: productData.stock || productData.inventory || 0, // Map to inventory field to match model
       sku: productData.sku,
       weight: productData.weight,
       dimensions: productData.dimensions ? JSON.stringify(productData.dimensions) : 

@@ -17,6 +17,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'react-hot-toast'
 import { 
   Plus, Edit2, Trash2, Upload, Download, Search, 
   Filter, Eye, Package, DollarSign, Tag, Image as ImageIcon,

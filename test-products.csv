@@ -1,0 +1,11 @@
+name,slug,description,price,inventory,category_id,difficulty,status,tags,dimensions
+"Monstera Deliciosa","monstera-deliciosa","Beautiful split-leaf philodendron perfect for indoor spaces",29.99,15,1,"easy","active","indoor,tropical,low-light","12x8x24"
+"Snake Plant","snake-plant","Hardy succulent that thrives in low light conditions",19.99,25,1,"easy","active","indoor,succulent,air-purifying","6x6x18"
+"Fiddle Leaf Fig","fiddle-leaf-fig","Statement plant with large glossy leaves",49.99,8,1,"medium","active","indoor,tropical,statement","18x18x48"
+"Peace Lily","peace-lily","Elegant flowering plant that indicates watering needs",24.99,12,1,"easy","active","indoor,flowering,low-light","10x10x20"
+"Rubber Plant","rubber-plant","Classic houseplant with thick glossy leaves",34.99,10,1,"easy","active","indoor,tropical,classic","14x14x36"
+"Pothos Golden","pothos-golden","Trailing vine perfect for hanging baskets",16.99,30,1,"easy","active","indoor,trailing,low-maintenance","8x8x12"
+"ZZ Plant","zz-plant","Extremely low maintenance plant perfect for beginners",27.99,18,1,"easy","active","indoor,succulent,drought-tolerant","10x10x24"
+"Aloe Vera","aloe-vera","Medicinal succulent with healing properties",14.99,20,2,"easy","active","succulent,medicinal,outdoor","6x6x12"
+"Lavender","lavender","Fragrant herb perfect for gardens and aromatherapy",22.99,15,3,"medium","active","herb,fragrant,outdoor","8x8x16"
+"Basil Sweet","basil-sweet","Essential culinary herb for cooking",8.99,40,3,"easy","active","herb,culinary,annual","4x4x8"
